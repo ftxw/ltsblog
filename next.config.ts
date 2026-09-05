@@ -79,8 +79,9 @@ const nextConfig: NextConfig = {
       //    否则 s-maxage 会覆盖 js/css 的 immutable。
       //    内容变更由后台接口调用 EdgeOne 缓存刷新（edgeone-purge.ts）即时生效；
       //    未配置刷新密钥时，新内容最长 5 分钟自然过期生效。
+      //    注意：source 正则禁止捕获组，分支括号必须用 (?:...) 非捕获写法。
       {
-        source: "/((?!api($|/)|admin($|/)).*)",
+        source: "/((?!api(?:$|/)|admin(?:$|/)).*)",
         headers: [
           {
             key: "Cache-Control",
