@@ -161,7 +161,7 @@ export async function PUT(
       }
     }
 
-    invalidatePostCaches(resp ? `/posts/${resp.id}` : undefined);
+    invalidatePostCaches();
     if (resp) revalidatePath(`/posts/${resp.id}`);
 
     return NextResponse.json(toPostItem(resp));
@@ -215,7 +215,7 @@ export async function DELETE(
       { timeout: 20_000 }
     );
 
-    invalidatePostCaches(`/posts/${existing.id}`);
+    invalidatePostCaches();
     revalidatePath(`/posts/${existing.id}`);
 
     // 同步删除图床文件：封面 + 正文中的外部图片（尽力而为，失败不影响数据库结果）

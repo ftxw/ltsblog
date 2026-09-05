@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    invalidatePostCaches(`/posts/${post.id}`);
+    invalidatePostCaches();
     revalidatePath(`/posts/${post.id}`);
 
     // 带标签的响应：事务内未返回标签名，这里重取一次（仅新增标签时）

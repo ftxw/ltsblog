@@ -23,7 +23,7 @@ export async function PUT(
       },
     });
 
-    invalidateAlbumCaches(`/photowall/${photo.album_id}`);
+    invalidateAlbumCaches();
 
     return NextResponse.json({ code: 0, message: "success", data: photo });
   } catch (err: unknown) {
@@ -49,7 +49,7 @@ export async function DELETE(
 
     await prisma.photo.delete({ where: { id } });
 
-    invalidateAlbumCaches(`/photowall/${photo.album_id}`);
+    invalidateAlbumCaches();
 
     // 查询对象 key，同步删除图床文件（尽力而为，失败不影响数据库结果）
     let synced = false;

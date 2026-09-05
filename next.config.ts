@@ -74,11 +74,9 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "no-store, must-revalidate" }],
       },
       // 4. HTML 页面（排除 /api 与 /admin）：允许 CDN 缓存 5 分钟 + 10 分钟 SWR。
-      //    让 EdgeOne（blog.lts.cc）和 Vercel 边缘都能直接命中 HTML，
-      //    国内访问不必每次跨境回源。注意本条必须排在静态资源规则**之前**，
-      //    否则 s-maxage 会覆盖 js/css 的 immutable。
-      //    内容变更由后台接口调用 EdgeOne 缓存刷新（edgeone-purge.ts）即时生效；
-      //    未配置刷新密钥时，新内容最长 5 分钟自然过期生效。
+      //    让 Vercel 边缘（blog.ftxw.cn）直接命中 HTML，国内访问不必每次回源。
+      //    注意本条必须排在静态资源规则**之前**，否则 s-maxage 会覆盖 js/css 的 immutable。
+      //    发布新内容后由后台写接口的 revalidatePath() 触发即时重建，缓存仅为兜底。
       //    注意：source 正则禁止捕获组，分支括号必须用 (?:...) 非捕获写法。
       {
         source: "/((?!api(?:$|/)|admin(?:$|/)).*)",
