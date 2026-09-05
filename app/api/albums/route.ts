@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    invalidateAlbumCaches();
+    invalidateAlbumCaches(`/photowall/${album.id}`);
 
     return NextResponse.json({ code: 0, message: "success", data: album });
   } catch (err: unknown) {

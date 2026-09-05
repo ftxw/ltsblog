@@ -53,7 +53,7 @@ export async function PUT(
       },
     });
 
-    invalidateAlbumCaches();
+    invalidateAlbumCaches(`/photowall/${id}`);
 
     return NextResponse.json({ code: 0, message: "success", data: album });
   } catch (err: unknown) {
@@ -82,7 +82,7 @@ export async function DELETE(
     await prisma.photo.deleteMany({ where: { album_id: id } });
     await prisma.album.delete({ where: { id } });
 
-    invalidateAlbumCaches();
+    invalidateAlbumCaches(`/photowall/${id}`);
 
     // 清理图床文件（尽力而为，失败不影响数据库结果）。
     // 走有界并发版本：一个相册可能有上百张照片，每张还要删原图 + 缩略图，

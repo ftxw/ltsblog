@@ -8,6 +8,7 @@
  */
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import {
   memoryCacheGet,
   memoryCacheSet,
@@ -16,6 +17,22 @@ import {
   clearAllMemoryCache,
 } from "./memory-cache";
 import { singleFlight } from "./single-flight";
+import { edgeonePurgeConfigured, purgeEdgeOneSite, purgeEdgeOneUrls } from "./edgeone-purge";
+
+/**
+ * 响应返回后刷新 EdgeOne 节点缓存（不阻塞响应，未配置密钥时为空操作）。
+ * paths 为站内路径列表，如 ["/", "/posts"]。
+ */
+function purgeEdgeOneAfter(paths: string[]): void {
+  if (!edgeonePurgeConfigured()) return;
+  try {
+    after(async () => {
+      await purgeEdgeOneUrls(paths);
+    });
+  } catch {
+    // after() 只能在请求上下文内调用；异常时静默跳过，缓存自然过期
+  }
+}
 
 /** 公开只读接口的缓存时长（60s） */
 export const PUBLIC_API_CACHE_TTL = 60_000;
@@ -76,7 +93,7 @@ export async function cachedPublicGet<T>(
 }
 
 /** 文章内容/点赞变化 → 文章列表、计数、分类/标签 post_count、文章评论、资料统计 */
-export function invalidatePostCaches(): void {
+export function invalidatePostCaches(detailPath?: string): void {
   invalidateMemoryCacheNamespaces([
     CACHE_NAMESPACE.posts,
     CACHE_NAMESPACE.postsCount,
@@ -88,6 +105,8 @@ export function invalidatePostCaches(): void {
   // ISR 页面即时刷新：发布/修改文章后首页与文章列表立即生效，不等 60s revalidate
   revalidatePath("/");
   revalidatePath("/posts");
+  // EdgeOne 节点缓存：首页 + 文章列表 +（可选）文章详情页
+  purgeEdgeOneAfter(detailPath ? ["/", "/posts", detailPath] : ["/", "/posts"]);
 }
 
 /** 说说内容/点赞/评论变化 → 说说列表、计数、评论、资料统计 */
@@ -100,6 +119,7 @@ export function invalidateChatterCaches(): void {
   ]);
   revalidatePath("/");
   revalidatePath("/moments");
+  purgeEdgeOneAfter(["/", "/moments"]);
 }
 
 /** 分类/标签变化 → 分类、标签、文章列表（post_count 变化） */
@@ -112,10 +132,11 @@ export function invalidateCatalogCaches(): void {
   ]);
   revalidatePath("/");
   revalidatePath("/posts");
+  purgeEdgeOneAfter(["/", "/posts"]);
 }
 
-/** 相册/照片变化 → 相册列表、相册照片、资料统计 */
-export function invalidateAlbumCaches(): void {
+/** 相册/照片变化 → 相册列表、相册照片、资料统计。detailPath 传相册详情页路径 */
+export function invalidateAlbumCaches(detailPath?: string): void {
   invalidateMemoryCacheNamespaces([
     CACHE_NAMESPACE.albums,
     CACHE_NAMESPACE.albumPhotos,
@@ -123,6 +144,9 @@ export function invalidateAlbumCaches(): void {
   ]);
   revalidatePath("/");
   revalidatePath("/photowall");
+  purgeEdgeOneAfter(
+    detailPath ? ["/", "/photowall", detailPath] : ["/", "/photowall"]
+  );
 }
 
 export function invalidateProjectCaches(): void {
@@ -133,11 +157,13 @@ export function invalidateProjectCaches(): void {
   ]);
   revalidatePath("/");
   revalidatePath("/projects");
+  purgeEdgeOneAfter(["/", "/projects"]);
 }
 
 export function invalidateBookmarkCaches(): void {
   invalidateMemoryCache(CACHE_NAMESPACE.bookmarks);
   revalidatePath("/bookmark");
+  purgeEdgeOneAfter(["/bookmark"]);
 }
 
 /** 业务链接增删改 → 链接列表缓存 */
@@ -154,4 +180,14 @@ export function invalidateCommentCaches(): void {
 export function invalidateAllPublicCaches(): void {
   clearAllMemoryCache();
   revalidatePath("/", "layout");
+  // 站点配置影响所有页面外壳 → EdgeOne 整站前缀刷新
+  if (edgeonePurgeConfigured()) {
+    try {
+      after(async () => {
+        await purgeEdgeOneSite();
+      });
+    } catch {
+      // 非请求上下文时静默跳过
+    }
+  }
 }

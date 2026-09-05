@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         prisma.photo.update({ where: { id }, data: { sort: idx + 1 } })
       )
     );
-    invalidateAlbumCaches();
+    invalidateAlbumCaches(`/photowall/${albumId}`);
     return NextResponse.json({ code: 0, message: "success" });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "未知错误";
