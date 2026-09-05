@@ -1,0 +1,146 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Tailwind CSS 4 class-based dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 防止滚动条出现/消失导致页面抖动 — 始终显示滚动条 */
+html {
+  overflow-y: scroll;
+  /* 禁用滚动锚定：防止资源加载导致布局变化时浏览器自动调整滚动位置（表现为刷新后页面自动下滑） */
+  overflow-anchor: none;
+}
+
+/* 禁用页面文字选中（输入框和代码块除外） */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea, [contenteditable], .prose, code, pre {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* 页面主容器：所有前台页面的统一宽度与内边距（max-w-6xl + 响应式内边距） */
+.container-page {
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+@media (min-width: 640px) {
+  .container-page {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+@media (min-width: 768px) {
+  .container-page {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+}
+@media (min-width: 1024px) {
+  .container-page {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* backdrop-filter 由 Tailwind 类自行处理，不全局覆盖 */
+
+/* 毛玻璃卡片 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+}
+
+/* 暗色模式毛玻璃 */
+.dark .glass-card {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== 自定义滚动条 ========== */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.8);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+}
+
+/* ========== 背景渐变动画 ========== */
+
+@keyframes gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-background {
+  background-size: 400% 400%;
+  animation: gradient-flow 15s ease infinite;
+}
+
+/* ========== 暗色模式背景增强 ========== */
+
+.dark body {
+  background: linear-gradient(135deg, #0f0b2e 0%, #1a1145 25%, #0d1b3e 50%, #1e1145 75%, #0f0b2e 100%);
+  background-size: 400% 400%;
+  animation: gradient-flow 20s ease infinite;
+}
+
+/* ========== 音乐页（云端乐律）========== */
+@keyframes music-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.music-rotating-disc {
+  animation: music-spin 20s linear infinite;
+}
+
+.music-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.music-no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.music-lyric-mask {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+}

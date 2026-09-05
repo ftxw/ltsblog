@@ -1,0 +1,368 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ContentStatus {
+  published
+  draft
+}
+
+enum CommentStatus {
+  approved
+  pending
+  rejected
+}
+
+enum LinkStatus {
+  active
+  hidden
+}
+
+enum AlbumLayout {
+  grid
+  timeline
+}
+
+model User {
+  id              String   @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  username        String   @unique
+  hashed_password String
+  nickname        String   @default("")
+  avatar          String   @default("") @db.VarChar(1024)
+  email           String   @default("")
+  bio             String   @default("") @db.VarChar(1024)
+  is_admin        Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now()) @updatedAt
+
+  @@map("user")
+}
+
+model Category {
+  id          String   @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  name        String   @unique
+  slug        String   @unique
+  description String   @default("") @db.VarChar(1024)
+  sort        Int      @default(0)
+  post_count  Int      @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
+
+  posts Post[]
+
+  @@map("category")
+}
+
+model Tag {
+  id         String @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  name       String @unique
+  slug       String @unique
+  post_count Int    @default(0)
+
+  posts PostTag[]
+
+  @@map("tag")
+}
+
+model Post {
+  id           String        @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  title        String
+  description  String        @default("") @db.VarChar(1024)
+  content      String        @db.Text
+  cover        String        @default("") @db.VarChar(1024)
+  category_id  String?
+  status       ContentStatus @default(draft)
+  is_pinned    Boolean       @default(false)
+  views        Int           @default(0)
+  published_at DateTime?
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @default(now()) @updatedAt
+
+  category Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  tags     PostTag[]
+  comments Comment[]
+
+  @@index([status, published_at])
+  @@index([category_id])
+  @@index([status, is_pinned, created_at])
+  @@map("post")
+}
+
+model PostTag {
+  post_id String
+  tag_id  String
+
+  post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  @@id([post_id, tag_id])
+  @@map("post_tag")
+}
+
+model Comment {
+  id                String        @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  post_id           String
+  parent_id         String?
+  email_user_name   String        @default("")
+  email_user_avatar String        @default("") @db.VarChar(1024)
+  content           String        @db.Text
+  likes             Int           @default(0)
+  ip                String        @default("")
+  status            CommentStatus @default(approved)
+  created_at        DateTime      @default(now())
+
+  post    Post      @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([post_id, status, created_at])
+  @@index([status, created_at])
+  @@map("comment")
+}
+
+model Chatter {
+  id         String        @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  content    String        @db.Text
+  images     String        @default("[]") @db.Text
+  location   String        @default("") @db.VarChar(1024)
+  likes      Int           @default(0)
+  status     ContentStatus @default(draft)
+  created_at DateTime      @default(now())
+  updated_at DateTime      @default(now()) @updatedAt
+
+  comments ChatterComment[]
+
+  @@index([status, created_at])
+  @@map("chatter")
+}
+
+model ChatterComment {
+  id                String        @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  chatter_id        String
+  parent_id         String?
+  email_user_name   String        @default("")
+  email_user_avatar String        @default("") @db.VarChar(1024)
+  content           String        @db.Text
+  ip                String        @default("")
+  likes             Int           @default(0)
+  status            CommentStatus @default(approved)
+  created_at        DateTime      @default(now())
+
+  chatter Chatter          @relation(fields: [chatter_id], references: [id], onDelete: Cascade)
+  parent  ChatterComment?  @relation("ChatterCommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  replies ChatterComment[] @relation("ChatterCommentReplies")
+
+  @@index([chatter_id, status, created_at])
+  @@index([status, created_at])
+  @@map("chatter_comment")
+}
+
+model Album {
+  id           String      @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  title        String
+  description  String      @default("") @db.VarChar(1024)
+  cover        String      @default("") @db.VarChar(1024)
+  /// 照片列表布局方式：grid（网格瀑布流）/timeline（按拍摄日期分组的时间轴）
+  layout       AlbumLayout @default(grid)
+  sort         Int         @default(0)
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @default(now()) @updatedAt
+  /// 手动设置的相册时间（未设置时展示回退到 updated_at）
+  published_at DateTime?
+
+  photos Photo[]
+
+  @@map("album")
+}
+
+model Photo {
+  id         String   @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  album_id   String
+  url        String   @db.Text
+  caption    String   @default("") @db.VarChar(1024)
+  /// 拍摄日期（用于时间轴视图分组），默认取创建时间
+  taken_at   DateTime @default(now())
+  sort       Int      @default(0)
+  created_at DateTime @default(now())
+
+  album Album @relation(fields: [album_id], references: [id], onDelete: Cascade)
+
+  @@index([album_id, sort])
+  @@map("photo")
+}
+
+model Project {
+  id               String        @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  name             String
+  description      String        @default("") @db.VarChar(1024)
+  long_description String        @default("") @db.VarChar(2048)
+  cover_image      String        @default("") @db.VarChar(1024)
+  /// 详情弹窗中展示的图片幻灯片（JSON 字符串数组）
+  images           String        @default("[]") @db.Text
+  tech_stack       String        @default("[]") @db.Text
+  link_github      String        @default("") @db.VarChar(512)
+  link_gitee       String        @default("") @db.VarChar(512)
+  link_live        String        @default("") @db.VarChar(512)
+  link_docs        String        @default("") @db.VarChar(512)
+  /// 后台发布/隐藏：published（已发布）/draft（草稿/隐藏）
+  status           ContentStatus @default(published)
+  status_label     String        @default("")
+  is_featured      Boolean       @default(false)
+  sort             Int           @default(0)
+  likes            Int           @default(0)
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @default(now()) @updatedAt
+
+  comments ProjectComment[]
+
+  @@index([status, sort])
+  @@map("project")
+}
+
+model ProjectComment {
+  id                String        @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  project_id        String
+  parent_id         String?
+  email_user_name   String        @default("")
+  email_user_avatar String        @default("") @db.VarChar(1024)
+  content           String        @db.Text
+  ip                String        @default("")
+  likes             Int           @default(0)
+  /// approved（通过）/pending（待审）/rejected（驳回）
+  status            CommentStatus @default(approved)
+  created_at        DateTime      @default(now())
+
+  project Project          @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  parent  ProjectComment?  @relation("ProjectCommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  replies ProjectComment[] @relation("ProjectCommentReplies")
+
+  @@index([project_id, status, created_at])
+  @@index([status, created_at])
+  @@map("project_comment")
+}
+
+model BookmarkCategory {
+  id          String   @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  name        String
+  icon        String   @default("") @db.VarChar(1024)
+  description String   @default("") @db.VarChar(1024)
+  sort        Int      @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
+
+  sites BookmarkSite[]
+
+  @@map("bookmark_category")
+}
+
+model BookmarkSite {
+  id          String   @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  category_id String
+  name        String
+  url         String   @db.Text
+  icon        String   @default("") @db.VarChar(1024)
+  description String   @default("") @db.VarChar(1024)
+  platforms   String   @default("[]") @db.VarChar(2048)
+  sort        Int      @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
+
+  category BookmarkCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@index([category_id])
+  @@map("bookmark_site")
+}
+
+model SiteConfig {
+  id          String   @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  key         String   @unique
+  value       String   @default("") @db.Text
+  description String   @default("") @db.VarChar(1024)
+  updated_at  DateTime @default(now()) @updatedAt
+
+  @@map("site_config")
+}
+
+/// 图床上传记录：保存 S3 兼容存储的对象 key，
+/// 删除照片/文章时按 key 调 DeleteObject 同步清理文件。
+model ImageUpload {
+  id         String   @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  /// 图床图片访问 URL（唯一，/api/img-proxy/imgs/{key}）
+  url        String   @unique
+  /// S3 对象 key（删除时按 key 删；留空时从 URL 提取）
+  asset_id   String   @default("")
+  created_at DateTime @default(now())
+
+  @@map("image_upload")
+}
+
+model LoginLog {
+  id            String   @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  user_id       String   @default("")
+  username      String   @default("")
+  ip            String   @default("")
+  address       String   @default("")
+  system        String   @default("")
+  browser       String   @default("")
+  summary       String   @default("")
+  operatingTime DateTime @default(now()) @map("operating_time")
+
+  @@index([user_id, operatingTime])
+  @@map("login_log")
+}
+
+/// 访客统计（轻量版）：按天聚合 PV/UV，不存明细
+model DailyStat {
+  /// 日期 YYYY-MM-DD
+  date String @id
+  pv   Int    @default(0)
+  uv   Int    @default(0)
+
+  @@map("daily_stat")
+}
+
+/// UV 去重辅助表：当天 IP 集合（只用于去重，不展示；可定期清理旧日期）
+model DailyUv {
+  /// 日期 YYYY-MM-DD
+  date String
+  ip   String
+
+  @@id([date, ip])
+  @@map("daily_uv")
+}
+
+/// 访客明细（后台「最近访客」用）：轻量记录，仅保留近 30 天
+model VisitorLog {
+  id         String   @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  ip         String   @default("")
+  /// 归属地整串（如「陕西省 西安市 中国电信」）
+  address    String   @default("") @db.VarChar(256)
+  /// 浏览器（如 Chrome / Edge / Safari）
+  browser    String   @default("")
+  created_at DateTime @default(now())
+
+  @@index([created_at])
+  @@map("visitor_log")
+}
+
+/// 业务链接：前台悬浮面板展示的网址集合（替代原工具箱）
+model BusinessLink {
+  id          String     @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  name        String
+  url         String     @db.Text
+  icon        String     @default("") @db.VarChar(1024)
+  description String     @default("") @db.VarChar(1024)
+  sort        Int        @default(0)
+  status      LinkStatus @default(active) // active / hidden
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @default(now()) @updatedAt
+
+  @@index([status])
+  @@map("business_link")
+}

@@ -1,0 +1,12 @@
+chore: 清理已取消功能（彩蛋/圆盘导航/子站/特效）遗留的无效代码
+
+- 删除 5 个孤儿组件（全项目无任何引用）：
+  - components/ui/CustomCursor.tsx（自定义光标特效残留）
+  - components/layout/Sidebar.tsx（未使用的侧边栏）
+  - components/ui/GlassCard.tsx（仅被孤儿 Sidebar 引用）
+  - components/ui/SearchBar.tsx（重复孤本，实际使用根目录 components/SearchBar.tsx）
+  - components/photos/Lightbox.tsx（照片墙已用页面内联灯箱，此组件无引用）
+- 删除根目录 8 个 _tmp_*.{数字} 构建残留空文件
+- 依赖核查：全部 dependencies 均在用；highlight.js / katex 为 rehype-highlight / rehype-katex
+  运行时依赖且 CSS 被 layout/about 引用，予以保留
+- npx tsc --noEmit 通过，无引用断裂

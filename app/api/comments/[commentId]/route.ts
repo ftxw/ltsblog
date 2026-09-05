@@ -1,0 +1,31 @@
+import { NextResponse } from "next/server";
+import { parseId } from "@/app/lib/comment-auth";
+import { prisma } from "@/app/lib/prisma";
+import { getCurrentUser } from "@/app/lib/auth";
+import { invalidateCommentCaches } from "@/app/lib/api-cache";
+import { errMsg } from "@/app/lib/http";
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ commentId: string }> }
+) {
+  try {
+    await getCurrentUser(request);
+    const p = await params;
+    const commentId = parseId(p.commentId);
+    if (commentId === null) {
+      return NextResponse.json({ error: "无效的评论ID" }, { status: 400 });
+    }
+
+    await prisma.comment.delete({ where: { id: commentId } });
+
+    invalidateCommentCaches();
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    if (errMsg(err) === "未登录" || errMsg(err) === "无效的令牌") {
+      return NextResponse.json({ error: errMsg(err) }, { status: 401 });
+    }
+    return NextResponse.json({ error: "删除评论失败" }, { status: 500 });
+  }
+}

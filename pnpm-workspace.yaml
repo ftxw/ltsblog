@@ -1,0 +1,11 @@
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  core-js: true
+  es5-ext: true
+  esbuild: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
+overrides:
+  unrs-resolver: 1.12.2

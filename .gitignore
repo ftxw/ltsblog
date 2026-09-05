@@ -1,0 +1,88 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# blog posts (content is managed separately)
+/content/posts/
+
+# admin build output (rebuilt on deploy)
+/public/admin
+
+# outdated admin build artifacts (current build goes to /public/admin)
+/admin/build/static/
+/admin/build/index.html
+/admin/build/favicon.ico
+/admin/build/icon.png
+/admin/build/logo.svg
+/admin/build/version.json
+
+# local uploads to public (production uses external image hosts)
+/public/uploads
+
+# local placeholder images used during early development
+# /public/images
+
+# OS / editor temp
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# dev logs
+next-dev*.log
+*.log
+
+# local database & dev files (do not commit)
+*.db
+dev-test.db
+
+# local deploy staging folder (contains a .env copy; cleaned by user manually)
+.deploy-tmp/
+
+# IDE agent workspace data
+.codebuddy/
+
+# build leftovers
+_tmp_*
+
+# local edgeone link state & AI workspace memory (never commit)
+.edgeone/
+.workbuddy/
