@@ -40,6 +40,30 @@ export interface Album {
   photos: AlbumPhoto[];
 }
 
+/**
+ * 为堆叠卡片挑选三张互不相同的照片 URL，返回顺序 [顶层, 中层, 底层]。
+ *
+ * - 顶层（最抢眼）优先用 album.cover，无封面时取 photos[0]；
+ * - 其余按 photos 顺序取后续照片。photos 由服务端按 `sort asc, created_at asc`
+ *   查询下发（见 app/photowall/page.tsx），即后台设定的展示顺序，无需客户端重排；
+ * - 已选过的 URL 会被跳过，保证三层互不相同；
+ * - 去重后仍不足 3 张（如相册只有 1 张照片）时循环复用已选项，
+ *   因此任何一层都不会出现空白层或空 src，也不会多发请求。
+ */
+function pickStackPhotos(album: Album): [string, string, string] {
+  const picked: string[] = [];
+  const tryPush = (url: string | undefined) => {
+    if (url && !picked.includes(url)) picked.push(url);
+  };
+  tryPush(album.cover);
+  for (const photo of album.photos) {
+    if (picked.length >= 3) break;
+    tryPush(photo?.url);
+  }
+  if (picked.length === 0) return ["", "", ""];
+  return [picked[0], picked[1 % picked.length], picked[2 % picked.length]];
+}
+
 /** 相册瀑布流列数订阅：响应式列数（<640px=1、640~1024px=2、≥1024px=3）
  *  用 useSyncExternalStore 订阅媒体查询，替代挂载时 effect 内 setState */
 function subscribeAlbumCols(onStoreChange: () => void) {
@@ -142,10 +166,11 @@ export default function PhotoWallClient({ initialAlbums }: { initialAlbums: Albu
   }, [matchedAlbums, albumColsCount]);
 
   const renderAlbumCard = (album: Album, index: number) => {
-    // 堆叠三层统一使用封面图（无封面时服务端已兜底为第一张照片）。
-    // 中/底层的偏转 + 灰度 + 模糊均为纯 CSS 滤镜，三层同 URL 只发一次网络请求，
-    // 立体堆叠视觉完全保留，首屏并发从 3N 张缩略图降为 N 张。
-    const cover = album.cover || album.photos[0]?.url || "";
+    // 堆叠三层各显示一张不同的照片：顶层用封面（无封面时服务端已兜底为第一张），
+    // 中/底层按 photos 顺序取后续不重复的照片，看起来才像"一叠"不同的相片。
+    // 代价是缩略图请求数从 N 涨到最多 3N，这里用 loading="lazy" 兜住：
+    // 屏幕外的卡片不会立即发起请求（见 pickStackPhotos 的选取与去重逻辑）。
+    const [topUrl, midUrl, bottomUrl] = pickStackPhotos(album);
     const openAlbum = () => {
       listScrollRef.current = window.scrollY;
       setSearchQuery("");
@@ -165,39 +190,39 @@ export default function PhotoWallClient({ initialAlbums }: { initialAlbums: Albu
         {album.photos.length > 0 ? (
           <>
             <div className="absolute inset-0 bg-slate-300 dark:bg-slate-700 rounded-[4px] shadow-md transform rotate-6 translate-x-4 translate-y-2 group-hover:rotate-12 group-hover:translate-x-8 transition-all duration-500 border-[6px] border-white dark:border-slate-200 overflow-hidden opacity-60">
-              {cover && (
-                // eslint-disable-next-line @next/next/no-img-element -- 堆叠背面层复用封面缩略图，thumb/ 404 需 onError 回退原图
+              {bottomUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- 堆叠背面层用第 3 张照片缩略图，thumb/ 404 需 onError 回退原图
                 <img
-                  src={thumbUrlOf(cover)}
+                  src={thumbUrlOf(bottomUrl)}
                   loading="lazy"
                   decoding="async"
-                  onError={(e) => imgFallback(e, cover)}
+                  onError={(e) => imgFallback(e, bottomUrl)}
                   className="w-full h-full object-cover grayscale blur-[2px]"
                   alt=""
                 />
               )}
             </div>
             <div className="absolute inset-0 bg-slate-200 dark:bg-slate-600 rounded-[4px] shadow-lg transform -rotate-3 -translate-x-2 -translate-y-1 group-hover:-rotate-6 group-hover:-translate-x-6 transition-all duration-500 border-[6px] border-white dark:border-slate-200 overflow-hidden opacity-80 z-10">
-              {cover && (
-                // eslint-disable-next-line @next/next/no-img-element -- 堆叠中间层复用封面缩略图，thumb/ 404 需 onError 回退原图
+              {midUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- 堆叠中间层用第 2 张照片缩略图，thumb/ 404 需 onError 回退原图
                 <img
-                  src={thumbUrlOf(cover)}
+                  src={thumbUrlOf(midUrl)}
                   loading="lazy"
                   decoding="async"
-                  onError={(e) => imgFallback(e, cover)}
+                  onError={(e) => imgFallback(e, midUrl)}
                   className="w-full h-full object-cover grayscale-[50%]"
                   alt=""
                 />
               )}
             </div>
             <div className="absolute inset-0 bg-white dark:bg-slate-200 rounded-[4px] shadow-2xl border-[6px] border-white dark:border-slate-200 overflow-hidden z-20 transform group-hover:-translate-y-2 group-hover:scale-105 transition-all duration-500 relative">
-              {cover ? (
-                // eslint-disable-next-line @next/next/no-img-element -- 图床缩略图动态 URL，thumb/ 404 需 onError 回退原图
+              {topUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- 堆叠顶层用封面缩略图，thumb/ 404 需 onError 回退原图
                 <img
-                  src={thumbUrlOf(cover)}
+                  src={thumbUrlOf(topUrl)}
                   loading="lazy"
                   decoding="async"
-                  onError={(e) => imgFallback(e, cover)}
+                  onError={(e) => imgFallback(e, topUrl)}
                   alt={album.title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
