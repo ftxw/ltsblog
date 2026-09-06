@@ -3,13 +3,15 @@
 import Image from "next/image";
 import type { ImageProps } from "next/image";
 import { useState } from "react";
+import { PLACEHOLDER_IMG } from "@/app/lib/image-thumb";
 
 /**
  * 与 next.config.ts 的 images.remotePatterns 保持一致的白名单。
  * 白名单内的远程域名 + 本地路径 → next/image（享受尺寸/格式优化）
  * 其余任意外链 → 降级为原生 <img>（浏览器直连，不受 remotePatterns 限制）
  *
- * 设计要点：组件内部 useState 跟踪图片加载失败并自动切到 fallbackSrc，
+ * 设计要点：组件内部 useState 跟踪图片加载失败；失败即停——不再请求原图，
+ * 直接把 src 换成统一占位图 PLACEHOLDER_IMG（data URI，必加载成功）。
  * 调用方无需传 onError 事件处理器（避免 server→client 边界事件函数序列化问题）。
  */
 const ALLOWED_REMOTE_HOSTS = new Set([
@@ -28,7 +30,7 @@ function isOptimizableUrl(src: string): boolean {
 
 type SafeImageProps = Omit<ImageProps, "src" | "onError" | "placeholder" | "onLoad"> & {
   src: string;
-  /** 加载失败时的兜底 URL（一般传原图，让缩略图 404 时回退到原图） */
+  /** @deprecated 加载失败已统一显示占位图，此字段不再生效，保留仅为兼容存量调用方 */
   fallbackSrc?: string;
   onLoad?: () => void;
 };
@@ -36,7 +38,6 @@ type SafeImageProps = Omit<ImageProps, "src" | "onError" | "placeholder" | "onLo
 export default function SafeImage({
   src,
   alt,
-  fallbackSrc,
   fill,
   className,
   sizes,
@@ -46,8 +47,8 @@ export default function SafeImage({
   ...rest
 }: SafeImageProps) {
   const [errored, setErrored] = useState(false);
-  // 已失败且有 fallback：切到 fallback；否则用 src
-  const effectiveSrc = errored && fallbackSrc ? fallbackSrc : src;
+  // 加载失败即换统一占位图（data URI），不再切回原图、不发起第二次请求
+  const effectiveSrc = errored ? PLACEHOLDER_IMG : src;
 
   if (isOptimizableUrl(effectiveSrc)) {
     return (
@@ -61,7 +62,7 @@ export default function SafeImage({
         priority={priority}
         quality={quality}
         // 动态 URL 不使用 blur placeholder（需要 blurDataURL，否则优化器 400
-        placeholder={fallbackSrc ? "empty" : "empty"}
+        placeholder="empty"
         onError={() => setErrored(true)}
         onLoad={onLoad}
         {...rest}

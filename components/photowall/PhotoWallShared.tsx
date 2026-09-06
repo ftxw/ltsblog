@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode, type SyntheticEvent } from "react";
 import { motion } from "framer-motion";
 import { Calendar } from "lucide-react";
-import { thumbUrlOf } from "@/app/lib/image-thumb";
+import { thumbUrlOf, markImgBroken } from "@/app/lib/image-thumb";
 
 export interface Photo {
   url: string;
@@ -12,10 +12,9 @@ export interface Photo {
   takenAt?: Date;
 }
 
-/** 约定式缩略图 404（存量图片无 thumb/ 对象）时把 <img> 回退到原图 */
+/** 约定式缩略图 404（存量图片无 thumb/ 对象）时失败即停，换统一占位图（不再回退原图） */
 export function imgFallback(e: SyntheticEvent<HTMLImageElement>, original: string) {
-  const img = e.currentTarget;
-  if (img.src !== original) img.src = original;
+  markImgBroken(e.currentTarget, original);
 }
 
 /** 把任意可识别日期字符串安全解析为 Date 对象 */
@@ -77,8 +76,6 @@ export function PhotoCard({
   children?: ReactNode;
 }) {
   const [loaded, setLoaded] = useState(false);
-  // 列表优先加载约定式缩略图；存量图片没有缩略图对象时 404，onError 回退到原图
-  const [src, setSrc] = useState(() => thumbUrlOf(url));
   return (
     <motion.div
       onClick={onClick}
@@ -91,14 +88,14 @@ export function PhotoCard({
       }}
       className={className}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- 图床缩略图动态 URL，需 onError 回退原图（next/image 无法表达此回退） */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- 图床缩略图动态 URL；加载失败即换占位图（next/image 无法表达此回退） */}
       <img
-        src={src}
+        src={thumbUrlOf(url)}
         alt={alt}
         loading="lazy"
         onLoad={() => setLoaded(true)}
-        onError={() => {
-          if (src !== url) setSrc(url); // 缩略图失效时回退原图
+        onError={(e) => {
+          markImgBroken(e.currentTarget, url); // 失败即停，不再二次请求原图
           setLoaded(true);
         }}
         className={imgClassName}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, X } from "lucide-react";
+import { markImgBroken } from "@/app/lib/image-thumb";
 import {
   PhotoCard,
   TimelineView,
@@ -172,7 +173,7 @@ export default function AlbumDetailView({
             <X className="w-6 h-6" />
           </button>
 
-          {/* eslint-disable-next-line @next/next/no-img-element -- 全屏原图为图床大图，原生 img 直连 */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- 全屏原图为图床大图，原生 img 直连（失败即占位） */}
           <img
             src={selectedImage.url}
             alt={selectedImage.caption || "全屏照片"}
@@ -180,6 +181,7 @@ export default function AlbumDetailView({
             decoding="async"
             className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
+            onError={(e) => markImgBroken(e.currentTarget, selectedImage.url)}
           />
 
           {selectedImage.caption && (
