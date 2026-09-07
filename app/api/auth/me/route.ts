@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser, getRequestToken } from "@/app/lib/auth";
-import { supabaseUpdateProfile, supabaseGetUser } from "@/app/lib/supabase";
+import {
+  supabaseUpdateProfile,
+  supabaseGetUser,
+  isAdminEmail,
+} from "@/app/lib/supabase";
 import { errMsg } from "@/app/lib/http";
 
 /**
@@ -60,15 +64,15 @@ export async function PUT(request: Request) {
       bio: typeof bio === "string" ? bio : undefined,
     });
     const cur = await supabaseGetUser(token);
-    const isAdmin = updated.email
-      ? (await import("@/app/lib/supabase")).isAdminEmail(updated.email)
-      : false;
+    // updated 可能为 null（极少见），回退到拉取到的最新用户
+    const user = updated ?? cur;
+    const isAdmin = isAdminEmail(user.email);
 
     return NextResponse.json({
       code: 0,
       message: "success",
       data: toMeData(
-        { ...(updated || cur), is_admin: isAdmin },
+        { ...user, is_admin: isAdmin },
         typeof bio === "string" ? bio : ""
       ),
     });
