@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseRegister } from "@/app/lib/supabase";
+import { claimAdminIfFirst } from "@/app/lib/auth";
 
 /**
  * 公开注册评论账号（邮箱+密码+昵称）。
@@ -45,6 +46,12 @@ export async function POST(request: Request) {
     }
 
     const res = await supabaseRegister(email, password, nickname);
+
+    // 第一个注册的账号自动成为管理员（落 user 表 is_admin，尽力而为）
+    try {
+      await claimAdminIfFirst(res.user);
+    } catch {}
+
     if (res.needsConfirm || !res.session) {
       return NextResponse.json({
         code: 2,

@@ -1,16 +1,15 @@
-import { verifyAccessToken, isAdminEmail, type AppUser } from "@/app/lib/supabase";
+import { verifyAccessToken, type AppUser } from "@/app/lib/supabase";
+import { prisma } from "@/app/lib/prisma";
 
 /**
  * 统一鉴权入口（服务端）。
  *
- * 身份体系已切换为 Supabase Auth：本模块不再签发/校验自研 JWT，
- * 只负责从请求中取出 Supabase access token 并校验、按邮箱判定管理员。
+ * 身份体系已切换为 Supabase Auth：本模块不签发/校验自研 JWT，
+ * 只负责从请求中取出 Supabase access token 并交由 GoTrue 校验。
  *
- * - 后台管理接口：requireAdmin / getCurrentUser（Bearer 或 authorized-token cookie）
- * - 前台评论/点赞：comment-auth.ts 走 verifyAccessToken（Bearer）
- *
- * 管理员判定：登录邮箱 ∈ env ADMIN_EMAIL（逗号分隔），实时比对、不落库，
- * 因此无需改动 user 表，也无需「首个注册者=管理员」等引导逻辑。
+ * 管理员判定：**第一个注册（或登录）的账号自动成为管理员**——
+ * 注册/登录成功时调用 claimAdminIfFirst() 在 user 表落一条 is_admin 记录，
+ * 之后 requireAdmin 按登录邮箱查该表判定。无需任何环境变量。
  */
 
 export interface CurrentUser extends AppUser {
@@ -21,13 +20,51 @@ export interface CurrentUser extends AppUser {
   username: string;
 }
 
-function asCurrent(u: AppUser): CurrentUser {
-  return {
-    ...u,
-    is_admin: isAdminEmail(u.email),
-    sub: u.id,
-    username: u.email,
-  };
+function asCurrent(u: AppUser, isAdmin: boolean): CurrentUser {
+  return { ...u, is_admin: isAdmin, sub: u.id, username: u.email };
+}
+
+/** 按登录邮箱查 user 表的管理员标记（查不到=非管理员，DB 异常时同样按非管理员兜底） */
+async function withAdminFlag(u: AppUser): Promise<CurrentUser> {
+  let isAdmin = false;
+  try {
+    const row = await prisma.user.findUnique({
+      where: { username: u.email },
+      select: { is_admin: true },
+    });
+    isAdmin = Boolean(row?.is_admin);
+  } catch {
+    isAdmin = false;
+  }
+  return asCurrent(u, isAdmin);
+}
+
+/**
+ * 注册/登录成功后调用：确保 user 表存在该账号的记录；
+ * 若全库尚无任何「真实管理员」（排除历史遗留的空邮箱 admin 行），
+ * 则把当前账号立为管理员（先到先得）。
+ */
+export async function claimAdminIfFirst(u: AppUser) {
+  const existing = await prisma.user.findUnique({
+    where: { username: u.email },
+  });
+  if (existing) return existing;
+
+  const anyRealAdmin = await prisma.user.findFirst({
+    where: { is_admin: true, email: { not: "" } },
+    select: { id: true },
+  });
+
+  return prisma.user.create({
+    data: {
+      username: u.email,
+      email: u.email,
+      nickname: u.nickname,
+      avatar: u.avatar,
+      hashed_password: "",
+      is_admin: !anyRealAdmin,
+    },
+  });
 }
 
 /** 从请求头或 cookie 提取 access token（兼容旧的 authorized-token cookie 结构） */
@@ -52,11 +89,11 @@ export function getRequestToken(request: Request): string {
 export async function getCurrentUser(request: Request): Promise<CurrentUser> {
   const token = getRequestToken(request);
   if (!token) throw new Error("未登录");
-  return asCurrent(await verifyAccessToken(token));
+  return withAdminFlag(await verifyAccessToken(token));
 }
 
 /**
- * 管理员鉴权：要求登录且邮箱 ∈ ADMIN_EMAIL。
+ * 管理员鉴权：要求登录且 user 表中 is_admin。
  * 未登录抛 Error("未登录")；非管理员抛 Error("需要管理员权限")。
  */
 export async function requireAdmin(request: Request): Promise<CurrentUser> {
@@ -74,7 +111,7 @@ export async function checkAuthorizedAccessToken(
 ): Promise<CurrentUser | null> {
   if (!token) return null;
   try {
-    return asCurrent(await verifyAccessToken(token));
+    return await withAdminFlag(await verifyAccessToken(token));
   } catch {
     return null;
   }

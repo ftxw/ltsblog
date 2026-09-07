@@ -5,7 +5,7 @@ import { siteConfigDefs } from "../app/lib/site-config-defs";
  * 数据填充（仅站点配置默认值）。
  *
  * 注意：管理员账号不再由 seed 创建 —— 登录身份已切换为 Supabase Auth，
- * 管理员由环境变量 ADMIN_EMAIL 在登录时实时判定（见 app/lib/supabase.ts）。
+ * 管理员 = 第一个注册/登录的账号（注册或登录成功时在 user 表落 is_admin，见 app/lib/auth.ts）。
  */
 async function main() {
   // 创建默认站点配置（数据源为 app/lib/site-config-defs.ts）

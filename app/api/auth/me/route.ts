@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, getRequestToken } from "@/app/lib/auth";
-import {
-  supabaseUpdateProfile,
-  supabaseGetUser,
-  isAdminEmail,
-} from "@/app/lib/supabase";
+import { getCurrentUser, getRequestToken, claimAdminIfFirst } from "@/app/lib/auth";
+import { supabaseUpdateProfile, supabaseGetUser } from "@/app/lib/supabase";
 import { errMsg } from "@/app/lib/http";
 
 /**
@@ -66,7 +62,11 @@ export async function PUT(request: Request) {
     const cur = await supabaseGetUser(token);
     // updated 可能为 null（极少见），回退到拉取到的最新用户
     const user = updated ?? cur;
-    const isAdmin = isAdminEmail(user.email);
+    let isAdmin = false;
+    try {
+      const row = await claimAdminIfFirst(user);
+      isAdmin = Boolean(row?.is_admin);
+    } catch {}
 
     return NextResponse.json({
       code: 0,

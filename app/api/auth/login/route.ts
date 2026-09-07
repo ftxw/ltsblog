@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseLogin } from "@/app/lib/supabase";
-import { isAdminEmail } from "@/app/lib/supabase";
+import { claimAdminIfFirst } from "@/app/lib/auth";
 import {
   getLoginAttempts,
   recordLoginFailure,
@@ -69,7 +69,13 @@ export async function POST(request: Request) {
       });
     } catch {}
 
-    const isAdmin = isAdminEmail(user.email);
+    // 第一个注册/登录的账号自动成为管理员（user 表落 is_admin）
+    let isAdmin = false;
+    try {
+      const row = await claimAdminIfFirst(user);
+      isAdmin = Boolean(row?.is_admin);
+    } catch {}
+
     return NextResponse.json({
       code: 0,
       message: "success",

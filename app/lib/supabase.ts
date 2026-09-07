@@ -1,43 +1,30 @@
-import { jwtVerify } from "jose";
-
 /**
  * Supabase Auth 服务端封装（零新增依赖）。
  *
  * 身份体系已整体从「自研 JWT（jose+bcrypt）」切换到 Supabase Auth：
  * - 登录/注册/刷新：直接调 GoTrue REST（{SUPABASE_URL}/auth/v1/*）；
- * - 令牌校验：access token 是 GoTrue 用项目 JWT Secret 签的 HS256 JWT，
- *   用现有 jose 校验即可，无需额外网络请求，也无需 @supabase/supabase-js。
+ * - 令牌校验：调用 GoTrue 的 /auth/v1/user（用 access token 换取用户）。
+ *
+ * 为什么不在本地校验 JWT 签名：新版 Supabase 项目可能使用**非对称签名密钥**，
+ * 本地按 HS256 + JWT Secret 验签会失败（表现为「登录成功但评论/点赞 401 未登录」）。
+ * 交给 GoTrue 校验则与签名算法无关，永不失效。
  *
  * 环境变量：
- *   SUPABASE_URL             项目地址，如 https://xxxx.supabase.co
- *   SUPABASE_ANON_KEY        anon（公开）key
- *   SUPABASE_JWT_SECRET      项目 JWT Secret（Settings → API → JWT Secret）
- *   ADMIN_EMAIL              管理员邮箱，逗号分隔（登录时实时比对，不落库）
+ *   SUPABASE_URL        项目地址（完整 URL，如 https://xxxx.supabase.co）
+ *   SUPABASE_ANON_KEY   anon / publishable（公开）key
  */
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
 const ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
-const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || "";
-
-/** 管理员邮箱清单（env ADMIN_EMAIL，逗号分隔，统一小写比对） */
-export const ADMIN_EMAILS: string[] = (process.env.ADMIN_EMAIL || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(SUPABASE_URL && ANON_KEY && JWT_SECRET);
-}
-
-export function isAdminEmail(email?: string | null): boolean {
-  if (!email) return false;
-  return ADMIN_EMAILS.includes(email.toLowerCase());
+  return Boolean(SUPABASE_URL && ANON_KEY);
 }
 
 /** 未配置时给出可读错误（避免裸 undefined 请求） */
 function requireConfig() {
   if (!isSupabaseConfigured()) {
-    throw new Error("Supabase 未配置：请设置 SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_JWT_SECRET");
+    throw new Error("Supabase 未配置：请设置 SUPABASE_URL / SUPABASE_ANON_KEY");
   }
 }
 
@@ -148,26 +135,20 @@ export async function supabaseRefresh(refreshToken: string) {
 }
 
 /**
- * 校验 Supabase access token（HS256，key=项目 JWT Secret）。
- * 校验通过返回用户信息（昵称/头像从 token 的 user_metadata 取），
- * 失败抛错。不校验 aud，避免 anon key 变动导致误杀。
+ * 校验 Supabase access token：调 GoTrue 的 /auth/v1/user。
+ * 与签名算法无关（兼容 HS256 legacy secret 与新版非对称签名密钥），
+ * 失败抛 Error("无效的令牌")。
  */
 export async function verifyAccessToken(token: string): Promise<AppUser> {
-  requireConfig();
   try {
-    const { payload } = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
-    if (!payload.sub || payload.role !== "authenticated") {
-      throw new Error("无效的令牌");
+    const json = await authFetchWithToken(token, "/user");
+    const user = mapUser(json as never);
+    if (!user) throw new Error("无效的令牌");
+    return user;
+  } catch (e) {
+    if (e instanceof Error && e.message === "Supabase 未配置：请设置 SUPABASE_URL / SUPABASE_ANON_KEY") {
+      throw e;
     }
-    const meta = (payload.user_metadata || {}) as { nickname?: string; avatar?: string };
-    const email = String(payload.email || "");
-    return {
-      id: String(payload.sub),
-      email,
-      nickname: meta.nickname || (email ? email.split("@")[0] : "用户"),
-      avatar: meta.avatar || (email ? defaultAvatar(email) : ""),
-    };
-  } catch {
     throw new Error("无效的令牌");
   }
 }
