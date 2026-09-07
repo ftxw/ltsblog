@@ -150,15 +150,16 @@ export default function CommentAuthProvider({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, nickname }),
       });
-      const json: AuthResult = await res.json().catch(() => null);
-      if (!res.ok || json?.code !== 0) {
+      const json = (await res.json().catch(() => null)) as AuthResult | null;
+      if (!res.ok) {
         throw new Error(json?.message || "注册失败");
       }
-      if (json.code === 2) return true; // 需邮箱确认
-      if (json.data?.accessToken) {
-        applySession(json);
-        setLoginOpen(false);
+      if (json?.code === 2) return true; // 需邮箱确认
+      if (json?.code !== 0 || !json.data?.accessToken) {
+        throw new Error(json?.message || "注册失败");
       }
+      applySession(json);
+      setLoginOpen(false);
       return false;
     },
     [applySession]
