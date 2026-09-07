@@ -285,7 +285,7 @@ function ProjectDetailModal({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 md:px-7 py-5 space-y-5">
+            <div className="flex-1 overflow-y-auto px-5 md:px-7 py-5 flex flex-col space-y-5">
               <div>
                 <h2 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
                   {project.name}

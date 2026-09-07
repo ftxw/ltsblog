@@ -304,197 +304,210 @@ export default function Comments<T extends CommentItem>({
 
   return (
     <div>
-      {/* ===== 单行评论条：头像 + 输入占位 + 💬 评论数 + ♡ 点赞 ===== */}
+      {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
       <div className="flex items-center gap-2 md:gap-3">
-        <button
-          type="button"
-          onClick={() => (loggedIn ? setComposing((v) => !v) : openLogin())}
-          className="shrink-0 rounded-full overflow-hidden"
-          aria-label="头像"
+        <div
+          className={`flex-1 min-w-0 flex items-center gap-2 rounded-2xl bg-slate-100/80 dark:bg-slate-800/70 border px-2.5 md:px-3 py-1.5 md:py-2 transition-colors ${
+            composing && loggedIn
+              ? "border-indigo-300 dark:border-indigo-500/50"
+              : "border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
+          }`}
         >
-          {loggedIn && user!.avatar ? (
-            <SafeImage
-              src={user!.avatar}
-              alt={user!.nickname}
-              width={36}
-              height={36}
-              className="w-9 h-9 md:w-10 md:h-10 rounded-full"
+          {/* 头像：位于输入框内部左侧 */}
+          <button
+            type="button"
+            onClick={() => (loggedIn ? setComposing((v) => !v) : openLogin())}
+            className="shrink-0 rounded-full overflow-hidden"
+            aria-label="头像"
+          >
+            {loggedIn && user!.avatar ? (
+              <SafeImage
+                src={user!.avatar}
+                alt={user!.nickname}
+                width={32}
+                height={32}
+                className="w-8 h-8 md:w-9 md:h-9 rounded-full"
+              />
+            ) : (
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white">
+                <UserRound className="w-4 h-4 md:w-5 md:h-5" />
+              </div>
+            )}
+          </button>
+
+          {composing && loggedIn ? (
+            <textarea
+              ref={inputRef}
+              autoFocus
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+              placeholder={replyTo ? "写下你的回复..." : "说点什么..."}
+              rows={2}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
+                  handleSubmitComment();
+              }}
+              className="flex-1 min-w-0 bg-transparent text-xs md:text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none"
             />
           ) : (
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white">
-              <UserRound className="w-5 h-5" />
-            </div>
+            <button
+              type="button"
+              onClick={() => (loggedIn ? setComposing(true) : openLogin())}
+              className="flex-1 min-w-0 text-left text-xs md:text-sm text-slate-400 dark:text-slate-500 cursor-pointer"
+            >
+              {loggedIn ? "说点什么..." : "登录评论"}
+            </button>
           )}
-        </button>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => (loggedIn ? setComposing(true) : openLogin())}
-          className="flex-1 min-w-0 text-left rounded-full bg-slate-100/80 dark:bg-slate-800/70 border border-white/40 dark:border-white/10 px-3 md:px-4 py-2 md:py-2.5 text-xs md:text-sm text-slate-400 dark:text-slate-500 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors cursor-pointer"
-        >
-          {loggedIn ? "说点什么..." : "登录评论"}
-        </button>
+        {/* 💬 评论数 / ♡ 点赞：始终与输入框同一行，展开输入时同样可见 */}
+        <>
+          {/* 💬 评论数：展开/收起列表 */}
+            <button
+              type="button"
+              onClick={() => {
+                setListOpen((v) => !v);
+                if (!listOpen && commentsLoading && loadError) setLoadError(false);
+              }}
+              className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-xs md:text-sm font-semibold transition-colors cursor-pointer ${
+                listOpen
+                  ? "text-indigo-600 dark:text-indigo-400"
+                  : "text-slate-400 dark:text-slate-500 hover:text-indigo-500"
+              }`}
+              aria-label="评论"
+            >
+              <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="tabular-nums">{totalCount ?? 0}</span>
+            </button>
 
-        {/* 💬 评论数：展开/收起列表 */}
-        <button
-          type="button"
-          onClick={() => {
-            setListOpen((v) => !v);
-            if (!listOpen && commentsLoading && loadError) setLoadError(false);
-          }}
-          className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-xs md:text-sm font-semibold transition-colors cursor-pointer ${
-            listOpen
-              ? "text-indigo-600 dark:text-indigo-400"
-              : "text-slate-400 dark:text-slate-500 hover:text-indigo-500"
-          }`}
-          aria-label="评论"
-        >
-          <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
-          <span className="tabular-nums">{totalCount ?? 0}</span>
-        </button>
-
-        {/* ♡ 点赞 */}
-        <button
-          type="button"
-          onClick={handleEntityLike}
-          disabled={likeBusy}
-          className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-xs md:text-sm font-semibold transition-all cursor-pointer ${
-            likeState.liked
-              ? "text-pink-500"
-              : "text-slate-400 dark:text-slate-500 hover:text-pink-500"
-          }`}
-          aria-label="点赞"
-        >
-          <Heart
-            className={`w-4 h-4 md:w-5 md:h-5 transition-all ${
-              likeState.liked ? "fill-pink-500 scale-110" : ""
-            }`}
-          />
-          <span className="tabular-nums">{likeState.likes}</span>
-        </button>
+            {/* ♡ 点赞 */}
+            <button
+              type="button"
+              onClick={handleEntityLike}
+              disabled={likeBusy}
+              className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-xs md:text-sm font-semibold transition-all cursor-pointer ${
+                likeState.liked
+                  ? "text-pink-500"
+                  : "text-slate-400 dark:text-slate-500 hover:text-pink-500"
+              }`}
+              aria-label="点赞"
+            >
+              <Heart
+                className={`w-4 h-4 md:w-5 md:h-5 transition-all ${
+                  likeState.liked ? "fill-pink-500 scale-110" : ""
+                }`}
+              />
+              <span className="tabular-nums">{likeState.likes}</span>
+            </button>
+        </>
       </div>
 
-      {/* ===== 已登录点击输入后：两行展开编辑区 ===== */}
+      {/* ===== 展开后的第二行：左 表情，右 取消 / 发表（💬/♡ 始终在第一行） ===== */}
       <AnimatePresence>
         {composing && loggedIn && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="mt-3 rounded-2xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10">
-              <AnimatePresence>
-                {replyTo && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-0 text-[10px] md:text-xs text-slate-500 dark:text-slate-400">
-                      <Reply className="w-3 h-3" />
-                      <span>
-                        回复{" "}
-                        <span className="font-medium text-sky-600 dark:text-sky-400">
-                          {replyTo.email_user_name || "匿名"}
-                        </span>
+            <AnimatePresence>
+              {replyTo && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex items-center gap-1.5 pt-2 text-[10px] md:text-xs text-slate-500 dark:text-slate-400">
+                    <Reply className="w-3 h-3" />
+                    <span>
+                      回复{" "}
+                      <span className="font-medium text-sky-600 dark:text-sky-400">
+                        {replyTo.email_user_name || "匿名"}
                       </span>
-                      <span className="truncate flex-1 opacity-60 ml-1">
-                        {replyTo.content.slice(0, 40)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={cancelCompose}
-                        className="text-slate-400 hover:text-red-500 transition-colors shrink-0 cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <div className="p-3">
-                <textarea
-                  ref={inputRef}
-                  value={commentInput}
-                  onChange={(e) => setCommentInput(e.target.value)}
-                  placeholder={replyTo ? "写下你的回复..." : "说点什么..."}
-                  rows={2}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
-                      handleSubmitComment();
-                  }}
-                  className="w-full bg-transparent text-xs md:text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none"
-                />
-
-                {/* 表情面板 */}
-                <AnimatePresence>
-                  {showEmoji && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="mt-2 p-2 grid grid-cols-10 gap-0.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 max-h-28 overflow-y-auto">
-                        {EMOJIS.map((e) => (
-                          <button
-                            key={e}
-                            type="button"
-                            onClick={() => insertEmoji(e)}
-                            className="text-base md:text-lg p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded cursor-pointer"
-                          >
-                            {e}
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* 第二行：左表情，右 取消/发表 */}
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/50 dark:border-white/5">
-                  <button
-                    type="button"
-                    onClick={() => setShowEmoji((v) => !v)}
-                    className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                      showEmoji
-                        ? "text-amber-500 bg-amber-50 dark:bg-amber-500/10"
-                        : "text-slate-400 hover:text-amber-500"
-                    }`}
-                    title="插入表情"
-                  >
-                    <Smile className="w-4 h-4 md:w-5 md:h-5" />
-                  </button>
-
-                  <div className="flex items-center gap-2">
+                    </span>
+                    <span className="truncate flex-1 opacity-60 ml-1">
+                      {replyTo.content.slice(0, 40)}
+                    </span>
                     <button
                       type="button"
                       onClick={cancelCompose}
-                      className="px-3 py-1.5 rounded-full text-xs md:text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                      className="text-slate-400 hover:text-red-500 transition-colors shrink-0 cursor-pointer"
                     >
-                      取消
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSubmitComment}
-                      disabled={!commentInput.trim() || submitting}
-                      className="flex items-center gap-1 px-4 py-1.5 rounded-full bg-indigo-600 text-xs md:text-sm font-medium text-white hover:bg-indigo-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {submitting ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-3.5 h-3.5" />
-                      )}
-                      发表
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1 md:gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEmoji((v) => !v)}
+                  className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                    showEmoji
+                      ? "text-amber-500 bg-amber-50 dark:bg-amber-500/10"
+                      : "text-slate-400 hover:text-amber-500"
+                  }`}
+                  title="插入表情"
+                >
+                  <Smile className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+
+
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={cancelCompose}
+                  className="px-3 py-1.5 rounded-full text-xs md:text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitComment}
+                  disabled={!commentInput.trim() || submitting}
+                  className="flex items-center gap-1 px-4 py-1.5 rounded-full bg-indigo-600 text-xs md:text-sm font-medium text-white hover:bg-indigo-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {submitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  发表
+                </button>
               </div>
             </div>
+
+            <AnimatePresence>
+              {showEmoji && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-2 p-2 grid grid-cols-10 gap-0.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 max-h-28 overflow-y-auto">
+                    {EMOJIS.map((e) => (
+                      <button
+                        key={e}
+                        type="button"
+                        onClick={() => insertEmoji(e)}
+                        className="text-base md:text-lg p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded cursor-pointer"
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
