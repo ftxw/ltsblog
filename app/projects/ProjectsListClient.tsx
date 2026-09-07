@@ -2,12 +2,10 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, ChevronLeft, ChevronRight, Clock, GitBranch, GitFork, Globe, Heart, X } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Clock, GitBranch, GitFork, Globe, X } from "lucide-react";
 import SafeImage from "@/components/ui/SafeImage";
-import {
-  likeProject,
-  type ProjectItem,
-} from "@/app/api";
+import { type ProjectItem } from "@/app/api";
+import CommentAuthProvider from "@/components/providers/CommentAuthProvider";
 import ProjectComments from "./ProjectComments";
 import { formatDateCN } from "@/app/lib/format";
 import { siteConfig } from "@/siteConfig";
@@ -163,16 +161,6 @@ function ProjectDetailModal({
     [project.tech_stack]
   );
   const [idx, setIdx] = useState(0);
-  const [likes, setLikes] = useState(project.likes ?? 0);
-  // 点赞记录懒初始化（弹窗仅在客户端点击后挂载，无 SSR 水合问题）
-  const [likedIds, setLikedIds] = useState<Set<string>>(() => {
-    try {
-      const saved = localStorage.getItem("liked_projects");
-      return saved ? new Set<string>(JSON.parse(saved)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
   // 点击轮播图 → 全屏查看当前原图
   const [fullImg, setFullImg] = useState<string | null>(null);
 
@@ -191,24 +179,6 @@ function ProjectDetailModal({
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose, slides.length]);
-
-  const alreadyLiked = likedIds.has(project.id);
-
-  async function handleLike() {
-    const willUnlike = alreadyLiked;
-    setLikes((p) => (willUnlike ? Math.max(0, p - 1) : p + 1));
-    setLikedIds((p) => {
-      const n = new Set(p);
-      if (willUnlike) n.delete(project.id);
-      else n.add(project.id);
-      localStorage.setItem("liked_projects", JSON.stringify([...n]));
-      return n;
-    });
-    try {
-      const r = await likeProject(project.id, willUnlike);
-      if (typeof r?.likes === "number") setLikes(r.likes);
-    } catch {}
-  }
 
   return (
     <AnimatePresence>
@@ -410,28 +380,8 @@ function ProjectDetailModal({
               </div>
 
               <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
-                <ProjectComments projectId={project.id} />
+                <ProjectComments projectId={project.id} initialLikes={project.likes} />
               </div>
-            </div>
-
-            <div className="border-t border-slate-100 dark:border-slate-800 px-5 md:px-7 py-3 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
-              <span className="text-[11px] text-slate-400">
-                分享项目 · 已有 {likes + 1} 人浏览
-              </span>
-              <button
-                type="button"
-                onClick={handleLike}
-                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors ${
-                  alreadyLiked
-                    ? "bg-pink-500 text-white"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-pink-50 hover:text-pink-500"
-                }`}
-              >
-                <Heart
-                  className={`w-3.5 h-3.5 ${alreadyLiked ? "fill-white" : ""}`}
-                />
-                {likes}
-              </button>
             </div>
           </div>
         </motion.div>
@@ -498,7 +448,8 @@ export default function ProjectsListClient({ initialProjects }: { initialProject
   const onClose = useCallback(() => setSelected(null), []);
 
   return (
-    <div className="min-h-screen">
+    <CommentAuthProvider>
+      <div className="min-h-screen">
       <div className="container-page relative z-10">
         {/* 标题 + 简介（统一 PageHeader，项目无搜索） */}
         <PageHeader
@@ -558,6 +509,7 @@ export default function ProjectsListClient({ initialProjects }: { initialProject
       {selected && (
         <ProjectDetailModal project={selected} onClose={onClose} />
       )}
-    </div>
+      </div>
+    </CommentAuthProvider>
   );
 }

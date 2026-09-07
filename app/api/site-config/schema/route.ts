@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import {
   siteConfigDefs,
   siteConfigGroups,
@@ -9,7 +9,7 @@ import {
 // 后台站点配置页按分组展示与编辑。
 export async function GET(request: NextRequest) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     return NextResponse.json({ groups: siteConfigGroups, defs: siteConfigDefs });
   } catch (err: unknown) {
     console.error("Get site config schema error:", err);

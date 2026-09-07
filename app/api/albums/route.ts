@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { cachedPublicGet, CACHE_NAMESPACE, invalidateAlbumCaches } from "@/app/lib/api-cache";
 
 export async function GET() {
@@ -40,7 +40,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const body = await request.json();
     const album = await prisma.album.create({
       data: {

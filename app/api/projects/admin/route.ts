@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { parseStringArray as safeParseStringArray } from "@/app/lib/utils";
 import { errMsg } from "@/app/lib/http";
 
@@ -20,7 +20,7 @@ function serializeProject<
  */
 export async function GET(request: NextRequest) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
     const size = Math.min(100, Math.max(1, parseInt(searchParams.get("size") || "20")));

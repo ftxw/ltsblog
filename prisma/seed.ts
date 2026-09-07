@@ -1,21 +1,13 @@
-import bcrypt from "bcryptjs";
 import { prisma } from "../app/lib/prisma";
 import { siteConfigDefs } from "../app/lib/site-config-defs";
 
+/**
+ * 数据填充（仅站点配置默认值）。
+ *
+ * 注意：管理员账号不再由 seed 创建 —— 登录身份已切换为 Supabase Auth，
+ * 管理员由环境变量 ADMIN_EMAIL 在登录时实时判定（见 app/lib/supabase.ts）。
+ */
 async function main() {
-  // 创建 admin 用户（部署后请立即修改默认密码）
-  const adminPassword = await bcrypt.hash("admin123", 10);
-  await prisma.user.upsert({
-    where: { username: "admin" },
-    update: { nickname: "Admin" },
-    create: {
-      username: "admin",
-      hashed_password: adminPassword,
-      nickname: "Admin",
-      is_admin: true,
-    },
-  });
-
   // 创建默认站点配置（数据源为 app/lib/site-config-defs.ts）
   const siteConfigs = siteConfigDefs.map((def) => ({
     key: def.key,
@@ -32,7 +24,7 @@ async function main() {
     }
   }
 
-  console.log("Seed completed: admin user and default site configs created.");
+  console.log("Seed completed: default site configs created.");
 }
 
 main()

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseId } from "@/app/lib/comment-auth";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { invalidateCatalogCaches } from "@/app/lib/api-cache";
 import { errMsg } from "@/app/lib/http";
 
@@ -10,7 +10,7 @@ export async function PUT(
   { params }: { params: Promise<{ tagId: string }> }
 ) {
   try {
-    await getCurrentUser(req);
+    await requireAdmin(req);
     const { tagId } = await params;
     const id = parseId(tagId);
     if (id === null) {
@@ -50,7 +50,7 @@ export async function DELETE(
   { params }: { params: Promise<{ tagId: string }> }
 ) {
   try {
-    await getCurrentUser(req);
+    await requireAdmin(req);
     const { tagId } = await params;
     const id = parseId(tagId);
     if (id === null) {

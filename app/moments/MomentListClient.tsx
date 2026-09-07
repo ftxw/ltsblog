@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { MapPin, MessageSquare, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Heart, Clock } from 'lucide-react';
-import { likeChatter } from "@/app/api";
+import { MapPin, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Clock } from 'lucide-react';
+import CommentAuthProvider from "@/components/providers/CommentAuthProvider";
 import { relativeTime, formatDateCN } from "@/app/lib/format";
 import MomentComments from './MomentComments';
 import PageHeader from "@/components/ui/PageHeader";
@@ -28,49 +28,12 @@ function timeAgo(dateStr: string) {
   });
 }
 
-const LIKED_STORAGE_KEY = 'kirameku_moment_liked';
-
-function loadLikedMap(): Record<string, boolean> {
-  try {
-    return JSON.parse(localStorage.getItem(LIKED_STORAGE_KEY) || '{}') || {};
-  } catch {
-    return {};
-  }
-}
-
-function saveLikedMap(map: Record<string, boolean>) {
-  try {
-    localStorage.setItem(LIKED_STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // ignore
-  }
-}
-
 export default function MomentListClient({ initialMoments }: { initialMoments: Moment[] }) {
   const [moments] = useState<Moment[]>(initialMoments);
   const [loading] = useState(false);
-  const [openCommentId, setOpenCommentId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [lightbox, setLightbox] = useState<{ images: string[], index: number } | null>(null);
-  const [likedMap, setLikedMap] = useState<Record<string, boolean>>(() => loadLikedMap());
-  const [likeCountMap, setLikeCountMap] = useState<Record<string, number>>({});
-
-  const toggleLike = (moment: Moment) => {
-    const id = moment.id;
-    const willLike = !likedMap[id];
-    const current = likeCountMap[id] ?? moment.likes;
-    const nextMap = { ...likedMap, [id]: willLike };
-    setLikedMap(nextMap);
-    saveLikedMap(nextMap);
-    setLikeCountMap(prev => ({ ...prev, [id]: current + (willLike ? 1 : -1) }));
-    likeChatter(id, !willLike).catch(() => {
-      const rollbackMap = { ...likedMap, [id]: !willLike };
-      setLikedMap(rollbackMap);
-      saveLikedMap(rollbackMap);
-      setLikeCountMap(prev => ({ ...prev, [id]: current }));
-    });
-  };
 
   const processedMoments = useMemo(() => {
     let result = [...moments];
@@ -159,47 +122,32 @@ export default function MomentListClient({ initialMoments }: { initialMoments: M
 
       {renderImages(moment.images)}
 
-      <div className="mt-5 md:mt-10 flex items-center justify-between gap-2 md:gap-3">
-        <div className="min-w-0 flex-1 pr-2 flex items-center gap-1.5 md:gap-2">
-          <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 shrink-0 border border-slate-500/10">
-            <Clock size={10} className="md:w-3 md:h-3 shrink-0" />
-            {timeAgo(moment.date)}
+      <div className="mt-5 md:mt-8 flex items-center gap-1.5 md:gap-2">
+        <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 shrink-0 border border-slate-500/10">
+          <Clock size={10} className="md:w-3 md:h-3 shrink-0" />
+          {timeAgo(moment.date)}
+        </span>
+        {moment.location && (
+          <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 max-w-full truncate border border-indigo-500/10">
+            <MapPin size={10} className="md:w-3 md:h-3 shrink-0" />
+            <span className="truncate">{moment.location}</span>
           </span>
-          {moment.location && (
-            <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 max-w-full truncate border border-indigo-500/10">
-              <MapPin size={10} className="md:w-3 md:h-3 shrink-0" />
-              <span className="truncate">{moment.location}</span>
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 md:gap-3 shrink-0">
-          <button type="button" onClick={() => toggleLike(moment)} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0 rounded-full transition-all shadow-sm ${likedMap[moment.id] ? 'bg-rose-500 text-white shadow-rose-500/30 scale-110' : 'bg-white/80 dark:bg-slate-800 text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
-            <Heart size={14} className={`md:w-4 md:h-4 ${likedMap[moment.id] ? 'fill-current' : ''}`} />
-          </button>
-          {(likeCountMap[moment.id] ?? moment.likes) > 0 && (
-            <span className="text-xs md:text-sm font-bold text-slate-400 min-w-[16px] text-left">{likeCountMap[moment.id] ?? moment.likes}</span>
-          )}
-          <button type="button" onClick={() => setOpenCommentId(openCommentId === moment.id ? null : moment.id)} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0 rounded-full transition-all shadow-sm ${openCommentId === moment.id ? 'bg-indigo-500 text-white shadow-indigo-500/30 rotate-12' : 'bg-white/80 dark:bg-slate-800 text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
-            <MessageSquare size={14} className="md:w-4 md:h-4" />
-          </button>
-          {moment.comments_count > 0 && (
-            <span className="text-xs md:text-sm font-bold text-slate-400 min-w-[16px] text-left">{moment.comments_count}</span>
-          )}
-        </div>
+        )}
       </div>
 
-      <AnimatePresence>
-        {openCommentId === moment.id && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1, marginTop: 16 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <MomentComments chatterId={moment.id} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="mt-4 md:mt-6">
+        <MomentComments
+          chatterId={moment.id}
+          initialLikes={moment.likes}
+          initialCommentCount={moment.comments_count}
+        />
+      </div>
     </motion.div>
   );
 
   return (
-    <div className="container-page relative z-10 flex-1 flex flex-col min-h-[85vh]">
+    <CommentAuthProvider>
+      <div className="container-page relative z-10 flex-1 flex flex-col min-h-[85vh]">
 
       {/* 页头：标题 + 简介 + 搜索（统一 PageHeader） */}
       <PageHeader
@@ -303,6 +251,7 @@ export default function MomentListClient({ initialMoments }: { initialMoments: M
         )}
       </AnimatePresence>
 
-    </div>
+      </div>
+    </CommentAuthProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { cachedPublicGet, CACHE_NAMESPACE, invalidateChatterCaches } from "@/app/lib/api-cache";
 import { parseStringArray as safeParseImages } from "@/app/lib/utils";
 import { errMsg } from "@/app/lib/http";
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const body = await request.json();
     const { content, images, location, status } = body;
 

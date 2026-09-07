@@ -32,10 +32,52 @@ async function request<T>(
   return res.json();
 }
 
-/** 匿名评论/点赞的身份令牌（统一入口，供前台 API 客户端使用） */
+/** 前台登录（评论/点赞）身份令牌：Supabase access token，供 API 客户端使用 */
 export function getToken(): string {
   if (typeof window === "undefined") return "";
   return localStorage.getItem("anonymous_token") || "";
+}
+
+export interface CommentSessionUser {
+  id: string;
+  email: string;
+  nickname: string;
+  avatar: string;
+}
+
+/** 保存前台登录会话（token + 用户信息） */
+export function saveCommentSession(token: string, user: CommentSessionUser) {
+  try {
+    localStorage.setItem("anonymous_token", token);
+    localStorage.setItem("anonymous_user", JSON.stringify(user));
+  } catch {
+    // ignore
+  }
+}
+
+/** 读取本地保存的前台用户（无则 null） */
+export function loadCommentUser(): CommentSessionUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("anonymous_user");
+    if (!raw) return null;
+    const u = JSON.parse(raw);
+    if (u && typeof u.id === "string") return u as CommentSessionUser;
+    // 兼容旧格式 {login, avatar}（历史匿名身份），按无效处理
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** 清除前台登录会话 */
+export function clearCommentSession() {
+  try {
+    localStorage.removeItem("anonymous_token");
+    localStorage.removeItem("anonymous_user");
+  } catch {
+    // ignore
+  }
 }
 
 function qs(params?: Record<string, string | number | undefined>): string {

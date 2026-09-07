@@ -1,103 +1,87 @@
-import bcrypt from "bcryptjs";
-import { SignJWT, jwtVerify } from "jose";
-import { createHash } from "crypto";
-import { prisma } from "@/app/lib/prisma";
-
-function getSecretKey(): Uint8Array {
-  if (process.env.SECRET_KEY) {
-    return new TextEncoder().encode(process.env.SECRET_KEY);
-  }
-  // 使用固定派生密钥作为 fallback，避免每次重启导致所有用户 token 失效
-  // 生产环境请务必设置 SECRET_KEY 环境变量，不要使用默认 fallback
-  const fallbackKey = createHash("sha256")
-    .update("Blog-Default-Secret-Key-Please-Change-In-Production")
-    .digest("hex");
-  return new TextEncoder().encode(fallbackKey);
-}
-
-const SECRET_KEY = getSecretKey();
-const ALGORITHM = "HS256";
-const ACCESS_TOKEN_EXPIRE_HOURS = 72;
-const REFRESH_TOKEN_EXPIRE_DAYS = 30;
+import { verifyAccessToken, isAdminEmail, type AppUser } from "@/app/lib/supabase";
 
 /**
- * 一律使用 bcrypt 的**异步** API。
+ * 统一鉴权入口（服务端）。
  *
- * bcryptjs 是纯 JS 实现，cost=10 的 hashSync / compareSync 会**完全占死**
- * Node 事件循环约 50~100ms —— 这期间该实例无法接受新连接、无法处理任何
- * 其它请求的回调。并发登录/后台操作时表现为「点一下卡一下」。
+ * 身份体系已切换为 Supabase Auth：本模块不再签发/校验自研 JWT，
+ * 只负责从请求中取出 Supabase access token 并校验、按邮箱判定管理员。
+ *
+ * - 后台管理接口：requireAdmin / getCurrentUser（Bearer 或 authorized-token cookie）
+ * - 前台评论/点赞：comment-auth.ts 走 verifyAccessToken（Bearer）
+ *
+ * 管理员判定：登录邮箱 ∈ env ADMIN_EMAIL（逗号分隔），实时比对、不落库，
+ * 因此无需改动 user 表，也无需「首个注册者=管理员」等引导逻辑。
  */
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10);
+
+export interface CurrentUser extends AppUser {
+  is_admin: boolean;
+  /** 兼容历史 payload 字段：user id（与 AppUser.id 相同） */
+  sub: string;
+  /** 兼容历史 payload 字段：以邮箱作为 username */
+  username: string;
 }
 
-export async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
-  return bcrypt.compare(plain, hashed);
+function asCurrent(u: AppUser): CurrentUser {
+  return {
+    ...u,
+    is_admin: isAdminEmail(u.email),
+    sub: u.id,
+    username: u.email,
+  };
 }
 
-export async function createToken(payload: Record<string, unknown>): Promise<string> {
-  return new SignJWT(payload)
-    .setProtectedHeader({ alg: ALGORITHM })
-    .setExpirationTime(`${ACCESS_TOKEN_EXPIRE_HOURS}h`)
-    .sign(SECRET_KEY);
-}
-
-export async function createRefreshToken(payload: Record<string, unknown>): Promise<string> {
-  return new SignJWT({ ...payload, type: "refresh" })
-    .setProtectedHeader({ alg: ALGORITHM })
-    .setExpirationTime(`${REFRESH_TOKEN_EXPIRE_DAYS}d`)
-    .sign(SECRET_KEY);
-}
-
-export async function decodeToken(token: string) {
-  try {
-    const { payload } = await jwtVerify(token, SECRET_KEY, {
-      clockTolerance: 60,
-    });
-    return payload;
-  } catch {
-    throw new Error("无效的令牌");
-  }
-}
-
-export async function getCurrentUser(request: Request) {
-  // 优先从 Authorization header 读取
+/** 从请求头或 cookie 提取 access token（兼容旧的 authorized-token cookie 结构） */
+export function getRequestToken(request: Request): string {
   const auth = request.headers.get("Authorization") || "";
-  if (auth.startsWith("Bearer ")) {
-    const token = auth.slice(7);
-    return decodeToken(token);
-  }
+  if (auth.startsWith("Bearer ")) return auth.slice(7);
 
-  // 支持从 Cookie 读取（用于浏览器直接访问）
   const cookieHeader = request.headers.get("cookie") || "";
   const tokenMatch = cookieHeader.match(/authorized-token=([^;]+)/);
   if (tokenMatch) {
     try {
       const cookieData = JSON.parse(decodeURIComponent(tokenMatch[1]));
-      if (cookieData.accessToken) {
-        return decodeToken(cookieData.accessToken);
-      }
+      if (typeof cookieData.accessToken === "string") return cookieData.accessToken;
     } catch {
       // cookie 格式不对，忽略
     }
   }
+  return "";
+}
 
-  throw new Error("未登录");
+/** 解析当前登录用户；未登录抛 Error("未登录") */
+export async function getCurrentUser(request: Request): Promise<CurrentUser> {
+  const token = getRequestToken(request);
+  if (!token) throw new Error("未登录");
+  return asCurrent(await verifyAccessToken(token));
 }
 
 /**
- * 管理员鉴权：要求登录且 is_admin，返回用户记录。
+ * 管理员鉴权：要求登录且邮箱 ∈ ADMIN_EMAIL。
  * 未登录抛 Error("未登录")；非管理员抛 Error("需要管理员权限")。
  */
-export async function requireAdmin(request: Request) {
-  const payload = await getCurrentUser(request);
-  const userId = String(payload.sub || "");
-  if (!userId) {
-    throw new Error("未登录");
-  }
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || !user.is_admin) {
-    throw new Error("需要管理员权限");
-  }
+export async function requireAdmin(request: Request): Promise<CurrentUser> {
+  const user = await getCurrentUser(request);
+  if (!user.is_admin) throw new Error("需要管理员权限");
   return user;
+}
+
+/**
+ * 仅校验 token 是否有效（供服务端组件在渲染期判断登录态，如 admin 面板布局）。
+ * 无效/缺失返回 null，不抛错。
+ */
+export async function checkAuthorizedAccessToken(
+  token: string
+): Promise<CurrentUser | null> {
+  if (!token) return null;
+  try {
+    return asCurrent(await verifyAccessToken(token));
+  } catch {
+    return null;
+  }
+}
+
+/** 判断 token 是否为管理员（供服务端组件在渲染期使用） */
+export async function isAdminToken(token: string): Promise<boolean> {
+  const user = await checkAuthorizedAccessToken(token);
+  return Boolean(user?.is_admin);
 }

@@ -80,6 +80,7 @@ model Post {
   status       ContentStatus @default(draft)
   is_pinned    Boolean       @default(false)
   views        Int           @default(0)
+  likes        Int           @default(0)
   published_at DateTime?
   created_at   DateTime      @default(now())
   updated_at   DateTime      @default(now()) @updatedAt
@@ -365,4 +366,19 @@ model BusinessLink {
 
   @@index([status])
   @@map("business_link")
+}
+
+/// 登录态点赞记录：每账号每内容（post/chatter/project）一次，跨设备同步。
+/// target_type ∈ post | chatter | project；target_id 对应对内容表主键。
+model ContentLike {
+  id          String   @id @default(dbgenerated("substr(md5(random()::text), 1, 12)"))
+  /// Supabase Auth 用户 UUID
+  user_id     String
+  target_type String   @db.VarChar(16)
+  target_id   String
+  created_at  DateTime @default(now())
+
+  @@unique([user_id, target_type, target_id])
+  @@index([target_type, target_id])
+  @@map("content_like")
 }

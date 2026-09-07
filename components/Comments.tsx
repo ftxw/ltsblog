@@ -2,9 +2,22 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Reply, Send, Heart, MessageCircle, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import {
+  Reply,
+  Send,
+  Heart,
+  MessageCircle,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Smile,
+  UserRound,
+  X,
+} from "lucide-react";
 import SafeImage from "@/components/ui/SafeImage";
 import { relativeTime, flattenReplies } from "@/app/lib/format";
+import { useCommentAuth } from "@/components/providers/CommentAuthProvider";
+import { getLikeState, setLike, type LikeTargetType } from "@/app/api/like";
 
 /**
  * 通用评论项形状。ChatterCommentItem / ProjectCommentItem 都满足该结构。
@@ -39,6 +52,30 @@ export interface CommentsProps<T extends CommentItem> {
   likedKey?: string;
   /** 列表加载失败时展示「加载失败 + 重新加载」（默认关闭，静默失败） */
   showErrorRetry?: boolean;
+  /** 实体点赞目标类型（默认按 kind 映射：moment→chatter / post→post / project→project） */
+  likeTargetType?: LikeTargetType;
+  /** 初始点赞数（列表数据自带时传入，避免闪烁） */
+  initialLikes?: number;
+  /** 初始评论总数（列表数据自带时传入，避免闪烁） */
+  initialCommentCount?: number;
+}
+
+const KIND_TARGET: Record<string, LikeTargetType> = {
+  moment: "chatter",
+  post: "post",
+  project: "project",
+};
+
+const EMOJIS = [
+  "😀","😄","😊","😍","😘","😎","🤔","😅","😂","😭",
+  "😡","🥳","😇","🙃","😴","🤗","👍","👎","👏","🙏",
+  "💪","🔥","❤️","💔","✨","⭐","🎉","🌹","🌸","☕",
+  "🐱","🐶","🍀","✌️","🤝","💯","✅","❓","❗","🎂",
+];
+
+/** 递归统计评论总数（含回复） */
+function countAll(nodes: CommentItem[]): number {
+  return nodes.reduce((s, c) => s + 1 + countAll(c.replies ?? []), 0);
 }
 
 export default function Comments<T extends CommentItem>({
@@ -49,38 +86,50 @@ export default function Comments<T extends CommentItem>({
   likeComment,
   likedKey: likedKeyProp,
   showErrorRetry = false,
+  likeTargetType: likeTargetTypeProp,
+  initialLikes,
+  initialCommentCount,
 }: CommentsProps<T>) {
+  const { user, openLogin, loginOpen } = useCommentAuth();
   const likedKey = likedKeyProp ?? `liked_${kind}_comments`;
-  const [nicknameInput, setNicknameInput] = useState("");
-  const [emailInput, setEmailInput] = useState("");
-  const [websiteInput, setWebsiteInput] = useState("");
+  const likeTargetType = likeTargetTypeProp ?? KIND_TARGET[kind];
+
   const [commentInput, setCommentInput] = useState("");
   const [replyTo, setReplyTo] = useState<CommentItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
-  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(
-    new Set()
-  );
+  const [listOpen, setListOpen] = useState(false);
+  const [composing, setComposing] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
   const [likedCommentIds, setLikedCommentIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     const saved = localStorage.getItem(likedKey);
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+  const [likeState, setLikeState] = useState<{ likes: number; liked: boolean }>({
+    likes: initialLikes ?? 0,
+    liked: false,
+  });
+  const [likeBusy, setLikeBusy] = useState(false);
+  const [totalCount, setTotalCount] = useState<number | null>(initialCommentCount ?? null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [loadError, setLoadError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
 
-  // 加载评论
+  // 加载评论（列表与总数）
   useEffect(() => {
     let active = true;
+    setCommentsLoading(true);
     getComments(targetId)
       .then((data) => {
-        if (active) setComments(Array.isArray(data) ? data : []);
+        if (!active) return;
+        const list = Array.isArray(data) ? data : [];
+        setComments(list);
+        setTotalCount(countAll(list as CommentItem[]));
       })
       .catch(() => {
-        // 仅在开启 showErrorRetry 时记录错误态（供重试 UI 使用），
-        // 否则与旧行为一致：静默失败。
         if (active && showErrorRetry) setLoadError(true);
       })
       .finally(() => {
@@ -91,15 +140,32 @@ export default function Comments<T extends CommentItem>({
     };
   }, [targetId, getComments, retryTick, showErrorRetry]);
 
+  // 加载实体点赞状态（登录则带 liked）
+  useEffect(() => {
+    let active = true;
+    getLikeState(likeTargetType, targetId)
+      .then((s) => {
+        if (active) setLikeState(s);
+      })
+      .catch(() => {
+        // 忽略：保留 initialLikes
+      });
+    return () => {
+      active = false;
+    };
+  }, [likeTargetType, targetId, loginOpen]);
+
   function retryLoad() {
     setLoadError(false);
     setCommentsLoading(true);
     setRetryTick((t) => t + 1);
   }
 
-  function cancelReply() {
+  function cancelCompose() {
+    setComposing(false);
     setReplyTo(null);
     setCommentInput("");
+    setShowEmoji(false);
   }
 
   async function handleCommentLike(commentId: string) {
@@ -128,9 +194,15 @@ export default function Comments<T extends CommentItem>({
   }
 
   function startReply(c: CommentItem) {
+    if (!user) {
+      openLogin();
+      return;
+    }
     setReplyTo(c);
+    setComposing(true);
     setCommentInput("");
-    setTimeout(() => inputRef.current?.focus(), 100);
+    setShowEmoji(false);
+    setTimeout(() => inputRef.current?.focus(), 120);
   }
 
   function findTopLevelId(comments: CommentItem[], targetId: string): string | null {
@@ -163,34 +235,15 @@ export default function Comments<T extends CommentItem>({
     });
   }
 
+  /** 评论/回复提交（需登录） */
   async function handleSubmitComment() {
     if (!commentInput.trim() || submitting) return;
-    const name = nicknameInput.trim();
-    if (!name) {
-      alert("请输入昵称");
-      return;
-    }
-    if (name.length > 20) {
-      alert("昵称最多 20 个字符");
+    if (!user) {
+      openLogin();
       return;
     }
     setSubmitting(true);
     try {
-      // 同步确认身份：带上昵称/邮箱/网址匿名登录，拿到 token 后发评论
-      const loginRes = await fetch("/api/auth/anonymous", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nickname: name,
-          email: emailInput.trim(),
-          website: websiteInput.trim(),
-        }),
-      });
-      const loginData = await loginRes.json();
-      if (!loginRes.ok) throw new Error(loginData.error || "登录失败");
-      localStorage.setItem("anonymous_token", loginData.token);
-      localStorage.setItem("anonymous_user", JSON.stringify(loginData.user));
-
       const nc = await createComment({
         targetId,
         content: commentInput.trim(),
@@ -198,13 +251,20 @@ export default function Comments<T extends CommentItem>({
       });
       if (replyTo) {
         const topId = findTopLevelId(comments, replyTo.id) ?? replyTo.id;
-        setComments((p) => insertReply(p, replyTo.id, { ...nc, replies: [] }));
+        const next = insertReply(comments, replyTo.id, { ...nc, replies: [] });
+        setComments(next);
+        setTotalCount(countAll(next));
         setExpandedReplies((p) => new Set([...p, topId]));
       } else {
-        setComments((p) => [...p, { ...nc, replies: [] }]);
+        const next = [...comments, { ...nc, replies: [] }];
+        setComments(next);
+        setTotalCount(countAll(next));
       }
       setCommentInput("");
       setReplyTo(null);
+      setComposing(false);
+      setShowEmoji(false);
+      setListOpen(true);
     } catch (e) {
       alert(e instanceof Error ? e.message : "发送失败");
     } finally {
@@ -212,145 +272,299 @@ export default function Comments<T extends CommentItem>({
     }
   }
 
+  /** 实体点赞：未登录弹窗，登录后 optimistic 切换 */
+  async function handleEntityLike() {
+    if (likeBusy) return;
+    if (!user) {
+      openLogin();
+      return;
+    }
+    const nextLiked = !likeState.liked;
+    setLikeState((s) => ({ likes: Math.max(0, s.likes + (nextLiked ? 1 : -1)), liked: nextLiked }));
+    setLikeBusy(true);
+    try {
+      const res = await setLike(likeTargetType, targetId, nextLiked);
+      setLikeState({ likes: res.likes, liked: res.liked });
+    } catch {
+      // 回滚
+      setLikeState((s) => ({ likes: Math.max(0, s.likes + (nextLiked ? -1 : 1)), liked: !nextLiked }));
+    } finally {
+      setLikeBusy(false);
+    }
+  }
+
+  /** 插入表情（追加到输入末尾） */
+  function insertEmoji(emoji: string) {
+    setCommentInput((v) => v + emoji);
+    setShowEmoji(false);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  const loggedIn = Boolean(user);
+
   return (
     <div>
-      {/* 输入框 */}
-      <div className="rounded-2xl bg-white/50 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10 overflow-hidden">
-        <AnimatePresence>
-          {replyTo && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="flex items-center gap-1.5 px-2 pt-2 pb-0 text-[10px] md:text-xs text-slate-500 dark:text-slate-400">
-                <Reply className="w-3 h-3" />
-                <span>
-                  回复{" "}
-                  <span className="font-medium text-sky-600 dark:text-sky-400">
-                    {replyTo.email_user_name || "匿名"}
-                  </span>
-                </span>
-                <span className="truncate flex-1 opacity-60 ml-1">
-                  {replyTo.content.slice(0, 40)}
-                </span>
-                <button
-                  type="button"
-                  onClick={cancelReply}
-                  className="text-slate-400 hover:text-red-500 transition-colors shrink-0"
-                >
-                  ✕
-                </button>
-              </div>
-            </motion.div>
+      {/* ===== 单行评论条：头像 + 输入占位 + 💬 评论数 + ♡ 点赞 ===== */}
+      <div className="flex items-center gap-2 md:gap-3">
+        <button
+          type="button"
+          onClick={() => (loggedIn ? setComposing((v) => !v) : openLogin())}
+          className="shrink-0 rounded-full overflow-hidden"
+          aria-label="头像"
+        >
+          {loggedIn && user!.avatar ? (
+            <SafeImage
+              src={user!.avatar}
+              alt={user!.nickname}
+              width={36}
+              height={36}
+              className="w-9 h-9 md:w-10 md:h-10 rounded-full"
+            />
+          ) : (
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white">
+              <UserRound className="w-5 h-5" />
+            </div>
           )}
-        </AnimatePresence>
-        <div className="p-2.5 md:p-3">
-          <textarea
-            ref={inputRef}
-            value={commentInput}
-            onChange={(e) => setCommentInput(e.target.value)}
-            placeholder={replyTo ? "写下你的回复..." : "说点什么吧..."}
-            rows={3}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
-                handleSubmitComment();
-            }}
-            className="w-full bg-transparent text-xs md:text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none"
+        </button>
+
+        <button
+          type="button"
+          onClick={() => (loggedIn ? setComposing(true) : openLogin())}
+          className="flex-1 min-w-0 text-left rounded-full bg-slate-100/80 dark:bg-slate-800/70 border border-white/40 dark:border-white/10 px-3 md:px-4 py-2 md:py-2.5 text-xs md:text-sm text-slate-400 dark:text-slate-500 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors cursor-pointer"
+        >
+          {loggedIn ? "说点什么..." : "登录评论"}
+        </button>
+
+        {/* 💬 评论数：展开/收起列表 */}
+        <button
+          type="button"
+          onClick={() => {
+            setListOpen((v) => !v);
+            if (!listOpen && commentsLoading && loadError) setLoadError(false);
+          }}
+          className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-xs md:text-sm font-semibold transition-colors cursor-pointer ${
+            listOpen
+              ? "text-indigo-600 dark:text-indigo-400"
+              : "text-slate-400 dark:text-slate-500 hover:text-indigo-500"
+          }`}
+          aria-label="评论"
+        >
+          <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
+          <span className="tabular-nums">{totalCount ?? 0}</span>
+        </button>
+
+        {/* ♡ 点赞 */}
+        <button
+          type="button"
+          onClick={handleEntityLike}
+          disabled={likeBusy}
+          className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-xs md:text-sm font-semibold transition-all cursor-pointer ${
+            likeState.liked
+              ? "text-pink-500"
+              : "text-slate-400 dark:text-slate-500 hover:text-pink-500"
+          }`}
+          aria-label="点赞"
+        >
+          <Heart
+            className={`w-4 h-4 md:w-5 md:h-5 transition-all ${
+              likeState.liked ? "fill-pink-500 scale-110" : ""
+            }`}
           />
-          {/* 身份信息 + 发送：发送时同步确认（匿名登录），无需单独确认按钮 */}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 pt-2 md:mt-3 md:pt-3 border-t border-slate-200/50 dark:border-white/5">
-            <input
-              type="text"
-              value={nicknameInput}
-              onChange={(e) => setNicknameInput(e.target.value)}
-              placeholder="昵称"
-              maxLength={20}
-              className="flex-1 min-w-[80px] bg-transparent px-1 py-0 text-xs md:text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
-            />
-            <span className="text-slate-300 dark:text-slate-600 select-none">|</span>
-            <input
-              type="email"
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-              placeholder="邮箱"
-              maxLength={320}
-              className="flex-1 min-w-[120px] bg-transparent px-1 py-0 text-xs md:text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
-            />
-            <span className="text-slate-300 dark:text-slate-600 select-none">|</span>
-            <input
-              type="url"
-              value={websiteInput}
-              onChange={(e) => setWebsiteInput(e.target.value)}
-              placeholder="网址（选填）"
-              maxLength={1024}
-              className="flex-1 min-w-[120px] bg-transparent px-1 py-0 text-xs md:text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
-            />
-            <button
-              type="button"
-              onClick={handleSubmitComment}
-              disabled={!commentInput.trim() || submitting}
-              title="发送"
-              className="flex items-center justify-center p-0 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors flex-shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </button>
-          </div>
-        </div>
+          <span className="tabular-nums">{likeState.likes}</span>
+        </button>
       </div>
 
-      {showErrorRetry && loadError && (
-        <div className="text-center py-8 md:py-12 text-slate-400">
-          <MessageCircle className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 md:mb-3 opacity-40" />
-          <p className="text-xs md:text-sm mb-3">评论加载失败</p>
-          <button
-            type="button"
-            onClick={retryLoad}
-            className="text-[10px] md:text-xs text-sky-500 hover:text-sky-600 transition-colors underline underline-offset-2"
+      {/* ===== 已登录点击输入后：两行展开编辑区 ===== */}
+      <AnimatePresence>
+        {composing && loggedIn && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
           >
-            重新加载
-          </button>
-        </div>
-      )}
+            <div className="mt-3 rounded-2xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10">
+              <AnimatePresence>
+                {replyTo && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-0 text-[10px] md:text-xs text-slate-500 dark:text-slate-400">
+                      <Reply className="w-3 h-3" />
+                      <span>
+                        回复{" "}
+                        <span className="font-medium text-sky-600 dark:text-sky-400">
+                          {replyTo.email_user_name || "匿名"}
+                        </span>
+                      </span>
+                      <span className="truncate flex-1 opacity-60 ml-1">
+                        {replyTo.content.slice(0, 40)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={cancelCompose}
+                        className="text-slate-400 hover:text-red-500 transition-colors shrink-0 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-      {commentsLoading && (
-        <div className="space-y-3">
-          {[1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-10 rounded-xl bg-white/30 dark:bg-slate-700/20 animate-pulse"
-            />
-          ))}
-        </div>
-      )}
+              <div className="p-3">
+                <textarea
+                  ref={inputRef}
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  placeholder={replyTo ? "写下你的回复..." : "说点什么..."}
+                  rows={2}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
+                      handleSubmitComment();
+                  }}
+                  className="w-full bg-transparent text-xs md:text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none"
+                />
 
-      {!commentsLoading && comments.length > 0 && (
-        <div className="space-y-3 md:space-y-4 mt-3 md:mt-4">
-          {comments.map((comment) => (
-            <CommentCard
-              key={comment.id}
-              comment={comment}
-              expandedReplies={expandedReplies}
-              onReply={startReply}
-              onToggleReplies={(id) =>
-                setExpandedReplies((p) => {
-                  const n = new Set(p);
-                  if (n.has(id)) n.delete(id);
-                  else n.add(id);
-                  return n;
-                })
-              }
-              likedCommentIds={likedCommentIds}
-              onCommentLike={handleCommentLike}
-            />
-          ))}
-        </div>
-      )}
+                {/* 表情面板 */}
+                <AnimatePresence>
+                  {showEmoji && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-2 p-2 grid grid-cols-10 gap-0.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 max-h-28 overflow-y-auto">
+                        {EMOJIS.map((e) => (
+                          <button
+                            key={e}
+                            type="button"
+                            onClick={() => insertEmoji(e)}
+                            className="text-base md:text-lg p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded cursor-pointer"
+                          >
+                            {e}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* 第二行：左表情，右 取消/发表 */}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/50 dark:border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmoji((v) => !v)}
+                    className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                      showEmoji
+                        ? "text-amber-500 bg-amber-50 dark:bg-amber-500/10"
+                        : "text-slate-400 hover:text-amber-500"
+                    }`}
+                    title="插入表情"
+                  >
+                    <Smile className="w-4 h-4 md:w-5 md:h-5" />
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelCompose}
+                      className="px-3 py-1.5 rounded-full text-xs md:text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                    >
+                      取消
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmitComment}
+                      disabled={!commentInput.trim() || submitting}
+                      className="flex items-center gap-1 px-4 py-1.5 rounded-full bg-indigo-600 text-xs md:text-sm font-medium text-white hover:bg-indigo-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {submitting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      发表
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== 评论列表（💬 展开/收起） ===== */}
+      <AnimatePresence>
+        {listOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1, marginTop: 12 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            {showErrorRetry && loadError && (
+              <div className="text-center py-8 md:py-12 text-slate-400">
+                <MessageCircle className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 md:mb-3 opacity-40" />
+                <p className="text-xs md:text-sm mb-3">评论加载失败</p>
+                <button
+                  type="button"
+                  onClick={retryLoad}
+                  className="text-[10px] md:text-xs text-sky-500 hover:text-sky-600 transition-colors underline underline-offset-2"
+                >
+                  重新加载
+                </button>
+              </div>
+            )}
+
+            {commentsLoading && !loadError && (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-10 rounded-xl bg-white/30 dark:bg-slate-700/20 animate-pulse"
+                  />
+                ))}
+              </div>
+            )}
+
+            {!commentsLoading && comments.length === 0 && !loadError && (
+              <div className="text-center py-8 text-xs md:text-sm text-slate-400">
+                还没有评论，来抢沙发吧
+              </div>
+            )}
+
+            {!commentsLoading && comments.length > 0 && (
+              <div className="space-y-3 md:space-y-4">
+                {comments.map((comment) => (
+                  <CommentCard
+                    key={comment.id}
+                    comment={comment}
+                    expandedReplies={expandedReplies}
+                    onReply={startReply}
+                    onToggleReplies={(id) =>
+                      setExpandedReplies((p) => {
+                        const n = new Set(p);
+                        if (n.has(id)) n.delete(id);
+                        else n.add(id);
+                        return n;
+                      })
+                    }
+                    likedCommentIds={likedCommentIds}
+                    onCommentLike={handleCommentLike}
+                  />
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

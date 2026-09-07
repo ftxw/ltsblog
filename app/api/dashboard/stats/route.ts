@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { memoryCacheGet, memoryCacheSet } from "@/app/lib/memory-cache";
 import { singleFlight } from "@/app/lib/single-flight";
 
@@ -21,7 +21,7 @@ function getLast30Days(): string[] {
 
 export async function GET(request: Request) {
   try {
-    const payload = await getCurrentUser(request);
+    const payload = await requireAdmin(request);
     if (!String(payload.sub || "")) {
       return NextResponse.json({ error: "未登录" }, { status: 401 });
     }

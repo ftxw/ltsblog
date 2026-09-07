@@ -7,7 +7,7 @@ import { Button } from "@/components/admin/ui";
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,11 +20,11 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || json?.code !== 0 || !json?.data?.accessToken) {
-        setError(json?.message || "登录失败，请检查用户名和密码");
+        setError(json?.message || "登录失败，请检查邮箱和密码");
         return;
       }
       setTokenData({
@@ -49,22 +49,22 @@ export default function AdminLoginPage() {
             管
           </div>
           <h1 className="text-xl font-bold text-slate-900">博客后台登录</h1>
-          <p className="mt-1 text-sm text-slate-500">请输入管理员账号密码</p>
+          <p className="mt-1 text-sm text-slate-500">请输入管理员邮箱和密码</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              用户名
+              邮箱
             </label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               autoComplete="username"
               required
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="请输入用户名"
+              placeholder="请输入邮箱"
             />
           </div>
           <div>

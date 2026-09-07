@@ -28,6 +28,9 @@ export async function POST(request: Request) {
     }
 
     const userInfo = await getCommentUser(request);
+    if (!userInfo) {
+      return NextResponse.json({ error: "未登录" }, { status: 401 });
+    }
     const ip = getClientIp(request);
 
     const comment = await prisma.comment.create({
@@ -37,12 +40,8 @@ export async function POST(request: Request) {
         content: trimmedContent,
         ip,
         status: "approved",
-        ...(userInfo?.type === "email"
-          ? {
-              email_user_name: userInfo.email_user_name,
-              email_user_avatar: userInfo.email_user_avatar,
-            }
-          : {}),
+        email_user_name: userInfo.email_user_name,
+        email_user_avatar: userInfo.email_user_avatar,
       },
     });
 

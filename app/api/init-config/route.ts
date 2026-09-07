@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { siteConfigDefs } from "@/app/lib/site-config-defs";
 
 export async function GET(request: NextRequest) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
 
     const siteConfigs = siteConfigDefs.map((def) => ({
       key: def.key,

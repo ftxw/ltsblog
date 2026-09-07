@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser, hashPassword, verifyPassword } from "@/app/lib/auth";
+import { getCurrentUser, getRequestToken } from "@/app/lib/auth";
+import { supabaseLogin, supabaseUpdatePassword } from "@/app/lib/supabase";
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = await getCurrentUser(request);
-    const userId = String(payload.sub || "");
-    if (!userId) {
-      return NextResponse.json({ code: 1, message: "无效的令牌" }, { status: 401 });
+    const user = await getCurrentUser(request);
+    const token = getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ code: 1, message: "未登录" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -19,7 +19,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
     if (newPassword.length < 6) {
       return NextResponse.json(
         { code: 1, message: "新密码长度不能少于 6 位" },
@@ -27,30 +26,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { hashed_password: true },
-    });
-
-    if (!dbUser) {
-      return NextResponse.json(
-        { code: 1, message: "用户不存在" },
-        { status: 404 }
-      );
-    }
-
-    const match = await verifyPassword(oldPassword, dbUser.hashed_password);
-    if (!match) {
+    // 校验旧密码：用当前邮箱+旧密码走一次密码授权
+    try {
+      await supabaseLogin(user.email, String(oldPassword));
+    } catch {
       return NextResponse.json(
         { code: 1, message: "旧密码不正确" },
         { status: 400 }
       );
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { hashed_password: await hashPassword(newPassword) },
-    });
+    await supabaseUpdatePassword(token, String(newPassword));
 
     return NextResponse.json({
       code: 0,
@@ -58,6 +44,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "修改密码失败";
+    console.error("[POST /api/auth/change-password] error:", err);
     return NextResponse.json({ code: 1, message }, { status: 500 });
   }
 }

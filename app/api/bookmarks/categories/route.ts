@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { cachedPublicGet, CACHE_NAMESPACE, invalidateBookmarkCaches } from "@/app/lib/api-cache";
 
 export async function GET() {
@@ -14,7 +14,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const body = await request.json();
     // 检查同名分类是否已存在
     const existing = await prisma.bookmarkCategory.findFirst({

@@ -145,11 +145,12 @@ export default function AdminAccountPage() {
                 onChange={(e) => setProfile({ ...profile, nickname: e.target.value })}
               />
             </Field>
-            <Field label="邮箱">
+            <Field label="邮箱" hint="登录邮箱（不支持修改）">
               <Input
                 type="email"
                 value={profile.email}
                 onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                disabled
               />
             </Field>
             <Field label="个人简介">

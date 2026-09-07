@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { cachedPublicGet, CACHE_NAMESPACE, invalidateBookmarkCaches } from "@/app/lib/api-cache";
 import { parseSitePlatforms } from "@/app/lib/bookmark-serialize";
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const body = await request.json();
     const categoryId = String(body.category_id || "").trim();
     const name = String(body.name || "").trim();
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ code: 0, message: "success", data: parseSitePlatforms(site) });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "未知错误";
-    // 未登录（getCurrentUser 抛"未登录"）返回 401，其余为服务端错误
+    // 未登录（requireAdmin 抛"未登录"）返回 401，其余为服务端错误
     if (err instanceof Error && err.message.includes("未登录")) {
       return NextResponse.json({ code: 1, message }, { status: 401 });
     }

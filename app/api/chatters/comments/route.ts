@@ -17,6 +17,9 @@ export async function POST(request: Request) {
     }
 
     const userInfo = await getCommentUser(request);
+    if (!userInfo) {
+      return NextResponse.json({ error: "未登录" }, { status: 401 });
+    }
     const ip = getClientIp(request);
 
     const comment = await prisma.chatterComment.create({

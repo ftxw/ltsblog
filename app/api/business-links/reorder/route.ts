@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { invalidateBusinessLinkCaches } from "@/app/lib/api-cache";
 import { applySegmentReorder } from "@/app/lib/reorder";
 
 /** 业务链接拖拽排序：body = { ids: string[] }，按 ids 顺序段内重排，sort 归一为 1..N */
 export async function POST(request: NextRequest) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const body = await request.json();
     const list = await prisma.businessLink.findMany({
       orderBy: [{ sort: "asc" }, { id: "asc" }],

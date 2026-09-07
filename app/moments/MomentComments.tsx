@@ -11,14 +11,23 @@ import {
 export type { ChatterCommentItem as CommentItem };
 
 /**
- * 说说评论：包装通用 Comments 组件。
- * 保留原默认导出 / props 不变，向后兼容现有 page.tsx。
+ * 说说评论：包装通用 Comments 组件（新单行评论条：输入 + 💬评论数 + ♡点赞）。
  */
-export default function MomentComments({ chatterId }: { chatterId: string }) {
+export default function MomentComments({
+  chatterId,
+  initialLikes,
+  initialCommentCount,
+}: {
+  chatterId: string;
+  initialLikes?: number;
+  initialCommentCount?: number;
+}) {
   return (
     <Comments<ChatterCommentItem>
       targetId={chatterId}
       kind="moment"
+      initialLikes={initialLikes}
+      initialCommentCount={initialCommentCount}
       getComments={getChatterComments}
       createComment={(d) =>
         createChatterComment({

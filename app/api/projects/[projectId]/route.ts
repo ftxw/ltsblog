@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { invalidateProjectCaches } from "@/app/lib/api-cache";
 import { parseStringArray as safeParseStringArray } from "@/app/lib/utils";
 
@@ -41,7 +41,7 @@ export async function PUT(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const { projectId } = await params;
     const id = projectId;
     const body = await request.json();
@@ -93,7 +93,7 @@ export async function DELETE(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const { projectId } = await params;
     const id = projectId;
 

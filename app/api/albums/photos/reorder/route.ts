@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { invalidateAlbumCaches } from "@/app/lib/api-cache";
 import { applySegmentReorder } from "@/app/lib/reorder";
 
 /** 相册照片拖拽排序：body = { album_id, ids: string[] }，按 ids 顺序段内重排，sort 归一为 1..N */
 export async function POST(request: NextRequest) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const body = await request.json();
     const albumId = body.album_id;
     if (typeof albumId !== "string") {

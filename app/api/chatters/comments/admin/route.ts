@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { errMsg } from "@/app/lib/http";
 
 export async function GET(request: Request) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");

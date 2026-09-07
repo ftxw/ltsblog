@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { invalidateBookmarkCaches } from "@/app/lib/api-cache";
 
 export async function PUT(
@@ -8,7 +8,7 @@ export async function PUT(
   { params }: { params: Promise<{ catId: string }> }
 ) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const { catId } = await params;
     const id = catId;
     const body = await request.json();
@@ -49,7 +49,7 @@ export async function DELETE(
   { params }: { params: Promise<{ catId: string }> }
 ) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const { catId } = await params;
     const id = catId;
     await prisma.bookmarkCategory.delete({ where: { id } });

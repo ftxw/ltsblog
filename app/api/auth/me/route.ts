@@ -1,48 +1,42 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { getCurrentUser, getRequestToken } from "@/app/lib/auth";
+import { supabaseUpdateProfile, supabaseGetUser } from "@/app/lib/supabase";
 import { errMsg } from "@/app/lib/http";
+
+/**
+ * 当前用户信息（基于 Supabase Auth）。
+ * GET：解析 access token 返回用户资料；PUT：更新昵称/头像/简介（写入 user_metadata）。
+ * 邮箱为登录主键，修改需 Supabase 邮件确认流程，本接口不支持直接改邮箱。
+ */
+function toMeData(
+  u: { id: string; email: string; nickname: string; avatar: string; is_admin: boolean },
+  bio = ""
+) {
+  return {
+    id: u.id,
+    username: u.email,
+    nickname: u.nickname,
+    avatar: u.avatar,
+    email: u.email,
+    bio,
+    is_admin: u.is_admin,
+    roles: u.is_admin ? ["admin"] : ["user"],
+    permissions: u.is_admin ? ["*"] : [],
+  };
+}
 
 export async function GET(request: Request) {
   try {
-    const payload = await getCurrentUser(request);
-    const userId = String(payload.sub || "");
-    if (!userId) {
-      return NextResponse.json(
-        { code: 1, message: "无效的令牌" },
-        { status: 401 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return NextResponse.json(
-        { code: 1, message: "用户不存在" },
-        { status: 404 }
-      );
-    }
-
+    const user = await getCurrentUser(request);
     return NextResponse.json({
       code: 0,
       message: "success",
-      data: {
-        id: user.id,
-        username: user.username,
-        nickname: user.nickname,
-        avatar: user.avatar,
-        email: user.email,
-        bio: user.bio,
-        is_admin: user.is_admin,
-        roles: user.is_admin ? ["admin"] : ["user"],
-        permissions: user.is_admin ? ["*"] : [],
-      },
+      data: toMeData(user),
     });
   } catch (err) {
-    if (errMsg(err) === "未登录" || errMsg(err) === "无效的令牌") {
-      return NextResponse.json(
-        { code: 1, message: errMsg(err) },
-        { status: 401 }
-      );
+    const msg = errMsg(err);
+    if (msg === "未登录" || msg === "无效的令牌") {
+      return NextResponse.json({ code: 1, message: msg }, { status: 401 });
     }
     return NextResponse.json(
       { code: 1, message: "获取用户信息失败" },
@@ -53,47 +47,37 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const payload = await getCurrentUser(request);
-    const userId = String(payload.sub || "");
-    if (!userId) {
-      return NextResponse.json(
-        { code: 1, message: "无效的令牌" },
-        { status: 401 }
-      );
+    const token = getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ code: 1, message: "未登录" }, { status: 401 });
     }
-
     const body = await request.json();
-    const { nickname, email, bio, avatar } = body;
+    const { nickname, avatar, bio } = body;
 
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(nickname !== undefined && { nickname }),
-        ...(email !== undefined && { email }),
-        ...(bio !== undefined && { bio }),
-        ...(avatar !== undefined && { avatar }),
-      },
+    const updated = await supabaseUpdateProfile(token, {
+      nickname: typeof nickname === "string" ? nickname : undefined,
+      avatar: typeof avatar === "string" ? avatar : undefined,
+      bio: typeof bio === "string" ? bio : undefined,
     });
+    const cur = await supabaseGetUser(token);
+    const isAdmin = updated.email
+      ? (await import("@/app/lib/supabase")).isAdminEmail(updated.email)
+      : false;
 
     return NextResponse.json({
       code: 0,
       message: "success",
-      data: {
-        id: user.id,
-        username: user.username,
-        nickname: user.nickname,
-        avatar: user.avatar,
-        email: user.email,
-        bio: user.bio,
-      },
+      data: toMeData(
+        { ...(updated || cur), is_admin: isAdmin },
+        typeof bio === "string" ? bio : ""
+      ),
     });
   } catch (err) {
-    if (errMsg(err) === "未登录" || errMsg(err) === "无效的令牌") {
-      return NextResponse.json(
-        { code: 1, message: errMsg(err) },
-        { status: 401 }
-      );
+    const msg = errMsg(err);
+    if (msg === "未登录" || msg === "无效的令牌") {
+      return NextResponse.json({ code: 1, message: msg }, { status: 401 });
     }
+    console.error("[PUT /api/auth/me] error:", err);
     return NextResponse.json(
       { code: 1, message: "更新用户信息失败" },
       { status: 500 }

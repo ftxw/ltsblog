@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { parseId } from "@/app/lib/comment-auth";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { invalidateChatterCaches } from "@/app/lib/api-cache";
 import { errMsg } from "@/app/lib/http";
 
@@ -40,7 +40,7 @@ export async function PUT(
   { params }: { params: Promise<{ chatterId: string }> }
 ) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const p = await params;
     const chatterId = parseId(p.chatterId);
     if (chatterId === null) {
@@ -76,7 +76,7 @@ export async function DELETE(
   { params }: { params: Promise<{ chatterId: string }> }
 ) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const p = await params;
     const chatterId = parseId(p.chatterId);
     if (chatterId === null) {

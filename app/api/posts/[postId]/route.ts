@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseId } from "@/app/lib/comment-auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { invalidatePostCaches } from "@/app/lib/api-cache";
 import { deleteImagesByUrls, extractImageUrlsFromContent } from "@/app/lib/s3-image-host";
 import { syncPostTags, decrementTagCounts } from "@/app/lib/tag-sync";
@@ -48,7 +48,7 @@ export async function PUT(
   { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
-    await getCurrentUser(req);
+    await requireAdmin(req);
     const { postId } = await params;
     const id = parseId(postId);
     if (id === null) {
@@ -179,7 +179,7 @@ export async function DELETE(
   { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
-    await getCurrentUser(req);
+    await requireAdmin(req);
     const { postId } = await params;
     const id = parseId(postId);
     if (id === null) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { invalidateProjectCaches } from "@/app/lib/api-cache";
 import { applySegmentReorder } from "@/app/lib/reorder";
 
@@ -12,7 +12,7 @@ import { applySegmentReorder } from "@/app/lib/reorder";
  */
 export async function POST(request: NextRequest) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const body = await request.json();
     const list = await prisma.project.findMany({
       orderBy: [{ sort: "asc" }, { id: "asc" }],

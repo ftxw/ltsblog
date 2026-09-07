@@ -21,7 +21,6 @@
     "@meting/core": "^1.6.1",
     "@prisma/adapter-pg": "6.19.3",
     "@prisma/client": "^6.19.3",
-    "bcryptjs": "^3.0.3",
     "framer-motion": "^12.38.0",
     "gray-matter": "^4.0.3",
     "highlight.js": "^11.11.1",
@@ -41,7 +40,8 @@
     "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
-    "unified": "^11.0.5"
+    "unified": "^11.0.5",
+    "bcryptjs": "^3.0.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

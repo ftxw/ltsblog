@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const configs = await prisma.siteConfig.findMany({
       select: {
         id: true,

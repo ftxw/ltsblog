@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { parseId } from "@/app/lib/comment-auth";
 import {fail, errMsg} from "@/app/lib/http";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { invalidateChatterCaches } from "@/app/lib/api-cache";
 
 export async function PUT(
@@ -10,7 +10,7 @@ export async function PUT(
   { params }: { params: Promise<{ commentId: string }> }
 ) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const p = await params;
     const commentId = parseId(p.commentId);
     if (commentId === null) {

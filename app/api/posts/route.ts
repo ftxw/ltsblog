@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { cachedPublicGet, CACHE_NAMESPACE, invalidatePostCaches } from "@/app/lib/api-cache";
 import { syncPostTags } from "@/app/lib/tag-sync";
 import { errMsg } from "@/app/lib/http";
@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await getCurrentUser(req);
+    await requireAdmin(req);
     const body = await req.json();
     const {
       title,

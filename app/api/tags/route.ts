@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { cachedPublicGet, CACHE_NAMESPACE, invalidateCatalogCaches } from "@/app/lib/api-cache";
 import { errMsg } from "@/app/lib/http";
 
@@ -20,7 +20,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    await getCurrentUser(req);
+    await requireAdmin(req);
     const body = await req.json();
     const { name, slug } = body;
 

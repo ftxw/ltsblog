@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { decodeToken } from "@/app/lib/auth";
+import { checkAuthorizedAccessToken } from "@/app/lib/auth";
 import AdminShell from "@/components/admin/AdminShell";
 
 export const metadata: Metadata = {
@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * 后台面板布局：服务端校验登录态（读取 authorized-token cookie 并解析 JWT），
- * 未登录或令牌失效时跳转登录页。
+ * 后台面板布局：服务端校验登录态（读取 authorized-token cookie 并校验 Supabase token），
+ * 未登录或非管理员时跳转登录页。
  */
 export default async function AdminPanelLayout({
   children,
@@ -26,8 +26,8 @@ export default async function AdminPanelLayout({
     try {
       const data = JSON.parse(decodeURIComponent(raw));
       if (data?.accessToken) {
-        await decodeToken(data.accessToken);
-        authorized = true;
+        const user = await checkAuthorizedAccessToken(data.accessToken);
+        authorized = Boolean(user?.is_admin);
       }
     } catch {
       authorized = false;

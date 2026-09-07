@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { decodeToken, createToken, createRefreshToken } from "@/app/lib/auth";
+import { supabaseRefresh } from "@/app/lib/supabase";
 
 export async function POST(request: Request) {
   try {
@@ -13,39 +13,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // 验证 refresh token
-    const payload = await decodeToken(refreshToken);
-
-    if (payload.type !== "refresh") {
-      return NextResponse.json(
-        { code: 1, message: "无效的 refreshToken" },
-        { status: 401 }
-      );
-    }
-
-    // 签发新的 access token
-    const newAccessToken = await createToken({
-      sub: payload.sub,
-      username: payload.username,
-      type: "user",
-    });
-
-    // 同时轮换 refresh token（refresh token rotation）
-    const newRefreshToken = await createRefreshToken({
-      sub: payload.sub,
-      username: payload.username,
-    });
-
-    const expires = Date.now() + 72 * 60 * 60 * 1000;
+    const { session } = await supabaseRefresh(String(refreshToken));
 
     return NextResponse.json({
       code: 0,
       message: "success",
-      data: {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-        expires,
-      },
+      data: session,
     });
   } catch {
     return NextResponse.json(

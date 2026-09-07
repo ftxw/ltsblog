@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { getCurrentUser } from "@/app/lib/auth";
+import { requireAdmin } from "@/app/lib/auth";
 import { invalidateAlbumCaches } from "@/app/lib/api-cache";
 import { deleteImageByUrl } from "@/app/lib/s3-image-host";
 
@@ -10,7 +10,7 @@ export async function PUT(
   { params }: { params: Promise<{ photoId: string }> }
 ) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const { photoId } = await params;
     const id = photoId;
     const body = await request.json();
@@ -38,7 +38,7 @@ export async function DELETE(
   { params }: { params: Promise<{ photoId: string }> }
 ) {
   try {
-    await getCurrentUser(request);
+    await requireAdmin(request);
     const { photoId } = await params;
     const id = photoId;
 
