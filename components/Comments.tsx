@@ -305,15 +305,15 @@ export default function Comments<T extends CommentItem>({
   return (
     <div>
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
-      <div className="flex items-center gap-2 md:gap-3">
+      <div className="flex items-center">
         <div
-          className={`flex-1 min-w-0 flex items-center gap-2 rounded-2xl bg-slate-100/80 dark:bg-slate-800/70 border px-2.5 md:px-3 py-1.5 md:py-2 transition-colors ${
+          className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border px-2.5 md:px-3 py-1 md:py-1.5 transition-colors ${
             composing && loggedIn
               ? "border-indigo-300 dark:border-indigo-500/50"
               : "border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
           }`}
         >
-          {/* 头像：位于输入框内部左侧 */}
+          {/* 头像：位于输入框内部左侧，默认显示昵称首字 */}
           <button
             type="button"
             onClick={() => (loggedIn ? setComposing((v) => !v) : openLogin())}
@@ -324,13 +324,15 @@ export default function Comments<T extends CommentItem>({
               <SafeImage
                 src={user!.avatar}
                 alt={user!.nickname}
-                width={32}
-                height={32}
-                className="w-8 h-8 md:w-9 md:h-9 rounded-full"
+                width={30}
+                height={30}
+                className="w-7 h-7 md:w-8 md:h-8 rounded-full"
               />
             ) : (
-              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white">
-                <UserRound className="w-4 h-4 md:w-5 md:h-5" />
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-xs md:text-sm font-bold">
+                {loggedIn
+                  ? (user!.nickname || user!.email || "?").slice(0, 1).toUpperCase()
+                  : <UserRound className="w-3.5 h-3.5 md:w-4 md:h-4" />}
               </div>
             )}
           </button>
@@ -342,7 +344,7 @@ export default function Comments<T extends CommentItem>({
               value={commentInput}
               onChange={(e) => setCommentInput(e.target.value)}
               placeholder={replyTo ? "写下你的回复..." : "说点什么..."}
-              rows={2}
+              rows={1}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
                   handleSubmitComment();
@@ -360,23 +362,24 @@ export default function Comments<T extends CommentItem>({
           )}
         </div>
 
-        {/* 💬 评论数 / ♡ 点赞：始终与输入框同一行，展开输入时同样可见 */}
-        <>
-          {/* 💬 评论数：展开/收起列表 */}
+        {/* 💬 评论数 / ♡ 点赞：收起态显示；输入框展开后隐藏（第一行只留输入框） */}
+        {!(composing && loggedIn) && (
+          <>
+            {/* 💬 评论数：展开/收起列表 */}
             <button
               type="button"
               onClick={() => {
                 setListOpen((v) => !v);
                 if (!listOpen && commentsLoading && loadError) setLoadError(false);
               }}
-              className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-xs md:text-sm font-semibold transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-sm md:text-base font-semibold transition-colors cursor-pointer ${
                 listOpen
                   ? "text-indigo-600 dark:text-indigo-400"
                   : "text-slate-400 dark:text-slate-500 hover:text-indigo-500"
               }`}
               aria-label="评论"
             >
-              <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
+              <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
               <span className="tabular-nums">{totalCount ?? 0}</span>
             </button>
 
@@ -385,7 +388,7 @@ export default function Comments<T extends CommentItem>({
               type="button"
               onClick={handleEntityLike}
               disabled={likeBusy}
-              className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-xs md:text-sm font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-sm md:text-base font-semibold transition-all cursor-pointer ${
                 likeState.liked
                   ? "text-pink-500"
                   : "text-slate-400 dark:text-slate-500 hover:text-pink-500"
@@ -393,13 +396,14 @@ export default function Comments<T extends CommentItem>({
               aria-label="点赞"
             >
               <Heart
-                className={`w-4 h-4 md:w-5 md:h-5 transition-all ${
+                className={`w-5 h-5 md:w-6 md:h-6 transition-all ${
                   likeState.liked ? "fill-pink-500 scale-110" : ""
                 }`}
               />
               <span className="tabular-nums">{likeState.likes}</span>
             </button>
-        </>
+          </>
+        )}
       </div>
 
       {/* ===== 展开后的第二行：左 表情，右 取消 / 发表（💬/♡ 始终在第一行） ===== */}
@@ -455,7 +459,7 @@ export default function Comments<T extends CommentItem>({
                   }`}
                   title="插入表情"
                 >
-                  <Smile className="w-4 h-4 md:w-5 md:h-5" />
+                  <Smile className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
 
 
