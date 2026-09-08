@@ -379,11 +379,11 @@ function ProjectDetailModal({
                 发表于 {formatDateCN(new Date(project.created_at))}
               </div>
 
-              {/* 分割线：分割线下方为评论详情 */}
+              {/* 分割线：分割线下方紧贴评论详情（含"暂无评论"提示） */}
               <div className="border-t border-slate-100 dark:border-slate-800" />
 
-              {/* 评论详情（分割线下方，内容不足时靠底部） */}
-              <div className="mt-auto pt-3">
+              {/* 评论详情：紧贴分割线下方 */}
+              <div className="pt-3">
                 <ProjectComments projectId={project.id} initialLikes={project.likes} />
               </div>
             </div>

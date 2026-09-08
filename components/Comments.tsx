@@ -61,6 +61,8 @@ export interface CommentsProps<T extends CommentItem> {
   initialCommentCount?: number;
   /** 隐藏评论条右侧的 💬/♡ 按钮（说说的按钮放在卡片底部原位置） */
   hideActions?: boolean;
+  /** 挂载后自动展开输入框（说说：点 💬 后直接展开输入区 + 表情/发表/取消） */
+  autoCompose?: boolean;
   /** 评论总数变化回调（供外部卡片同步 💬 数字） */
   onCountChange?: (n: number) => void;
 }
@@ -95,6 +97,7 @@ export default function Comments<T extends CommentItem>({
   initialLikes,
   initialCommentCount,
   hideActions = false,
+  autoCompose = false,
   onCountChange,
 }: CommentsProps<T>) {
   const { user, openLogin } = useCommentAuth();
@@ -133,6 +136,17 @@ export default function Comments<T extends CommentItem>({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [loadError, setLoadError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
+
+  // 自动展开输入框（说说：点 💬 后直接展开输入区，无需再点输入框）
+  const autoComposedRef = useRef(false);
+  useEffect(() => {
+    if (!autoCompose || autoComposedRef.current) return;
+    if (!user) return;
+    autoComposedRef.current = true;
+    setComposing(true);
+    setShowEmoji(false);
+    setTimeout(() => inputRef.current?.focus(), 120);
+  }, [autoCompose, user]);
 
   // 加载评论（列表与总数）
   useEffect(() => {
@@ -305,7 +319,7 @@ export default function Comments<T extends CommentItem>({
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
       <div className="flex items-center">
         <div
-          className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border px-2 md:px-2.5 py-0.5 md:py-1 transition-colors ${
+          className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border px-2.5 md:px-3 py-1 md:py-1.5 transition-colors ${
             composing && loggedIn
               ? "border-indigo-300 dark:border-indigo-500/50"
               : "border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
@@ -318,10 +332,10 @@ export default function Comments<T extends CommentItem>({
             className="shrink-0 rounded-full overflow-hidden"
             aria-label="头像"
           >
-            <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-[10px] md:text-xs font-bold">
+            <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-xs md:text-sm font-bold">
               {loggedIn
                 ? (user!.nickname || user!.email || "?").slice(0, 1).toUpperCase()
-                : <UserRound className="w-3 h-3 md:w-3.5 md:h-3.5" />}
+                : <UserRound className="w-3.5 h-3.5 md:w-4 md:h-4" />}
             </div>
           </button>
 

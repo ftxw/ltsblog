@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { MapPin, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Clock, Heart, MessageSquare } from 'lucide-react';
+import { MapPin, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Clock, Heart, MessageCircle } from 'lucide-react';
 import CommentAuthProvider from "@/components/providers/CommentAuthProvider";
 import { useEntityLike } from "@/components/useEntityLike";
 import { relativeTime, formatDateCN } from "@/app/lib/format";
@@ -31,8 +31,8 @@ function timeAgo(dateStr: string) {
 
 /**
  * 说说卡片底部操作区：♡ 点赞 + 💬 评论。
- * 位置与样式保持最初的设计（卡片底部一行，右侧圆形按钮 + 数字）。
- * 点 💬 展开该说说的评论输入框与评论列表。
+ * 位置在卡片底部（最初位置），样式与文章/项目的评论、点赞按钮保持一致。
+ * 点 💬 展开该说说的评论输入框（自动完全展开）与评论列表。
  */
 function MomentActions({
   moment,
@@ -47,31 +47,41 @@ function MomentActions({
 }) {
   const { likes, liked, busy, toggle } = useEntityLike("chatter", moment.id, moment.likes);
   return (
-    <div className="flex items-center gap-2 md:gap-3 shrink-0">
+    <div className="flex items-center gap-1 md:gap-2 shrink-0">
+      {/* 💬 评论数 */}
+      <button
+        type="button"
+        onClick={onToggleComments}
+        className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-sm md:text-base font-semibold transition-colors cursor-pointer ${
+          commentsOpen
+            ? "text-indigo-600 dark:text-indigo-400"
+            : "text-slate-400 dark:text-slate-500 hover:text-indigo-500"
+        }`}
+        aria-label="评论"
+      >
+        <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
+        <span className="tabular-nums">{commentCount}</span>
+      </button>
+
+      {/* ♡ 点赞 */}
       <button
         type="button"
         onClick={toggle}
         disabled={busy}
+        className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-sm md:text-base font-semibold transition-all cursor-pointer ${
+          liked
+            ? "text-pink-500"
+            : "text-slate-400 dark:text-slate-500 hover:text-pink-500"
+        }`}
         aria-label="点赞"
-        className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0 rounded-full transition-all shadow-sm cursor-pointer ${liked ? 'bg-rose-500 text-white shadow-rose-500/30 scale-110' : 'bg-white/80 dark:bg-slate-800 text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
       >
-        <Heart size={14} className={`md:w-4 md:h-4 ${liked ? 'fill-current' : ''}`} />
+        <Heart
+          className={`w-5 h-5 md:w-6 md:h-6 transition-all ${
+            liked ? "fill-pink-500 scale-110" : ""
+          }`}
+        />
+        <span className="tabular-nums">{likes}</span>
       </button>
-      {likes > 0 && (
-        <span className="text-xs md:text-sm font-bold text-slate-400 min-w-[16px] text-left">{likes}</span>
-      )}
-
-      <button
-        type="button"
-        onClick={onToggleComments}
-        aria-label="评论"
-        className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0 rounded-full transition-all shadow-sm cursor-pointer ${commentsOpen ? 'bg-indigo-500 text-white shadow-indigo-500/30 rotate-12' : 'bg-white/80 dark:bg-slate-800 text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-      >
-        <MessageSquare size={14} className="md:w-4 md:h-4" />
-      </button>
-      {commentCount > 0 && (
-        <span className="text-xs md:text-sm font-bold text-slate-400 min-w-[16px] text-left">{commentCount}</span>
-      )}
     </div>
   );
 }

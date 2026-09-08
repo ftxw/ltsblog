@@ -30,8 +30,10 @@ export default function MomentComments({
       kind="moment"
       initialLikes={initialLikes}
       initialCommentCount={initialCommentCount}
-      // 说说的 💬/♡ 由卡片底部（原位置）承载，评论区不再重复渲染
+      // 说说的 💬/♡ 由卡片底部（原位置）承载，评论区不再重复渲染；
+      // 点开评论时输入框自动完全展开（表情 + 发表/取消直接可见）
       hideActions
+      autoCompose
       onCountChange={onCountChange}
       getComments={getChatterComments}
       createComment={(d) =>

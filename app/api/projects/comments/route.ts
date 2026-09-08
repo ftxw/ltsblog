@@ -15,10 +15,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const projectId = body.project_id;
+    // 注意：项目 ID 是 12 位字符串（非数字），不能用 Number.isFinite 校验
+    const projectId =
+      typeof body.project_id === "string" ? body.project_id.trim() : "";
     const content = (body.content ?? "").toString().trim();
     const parentId = body.parent_id ? body.parent_id : null;
-    if (!Number.isFinite(projectId) || !content) {
+    if (!projectId || !content) {
       return NextResponse.json({ code: 1, message: "参数错误" }, { status: 400 });
     }
     if (content.length > 1000) {
