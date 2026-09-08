@@ -314,13 +314,11 @@ export default function Comments<T extends CommentItem>({
   const loggedIn = Boolean(user);
 
   return (
-    <div className={kind === "project" ? "flex flex-col" : ""}>
-      {/* ===== 输入区：项目场景吸底固定在弹窗底部，其余场景正常流式 ===== */}
+    <div className={kind === "project" ? "flex-1 min-h-0 flex flex-col" : ""}>
+      {/* ===== 输入区：项目场景位于弹窗最底部固定，其余场景正常流式 ===== */}
       <div
         className={
-          kind === "project"
-            ? "order-2 sticky bottom-0 z-10 pt-2 -mx-5 md:-mx-7 px-5 md:px-7 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-100 dark:border-slate-800"
-            : ""
+          kind === "project" ? "order-2 shrink-0 pt-1.5" : ""
         }
       >
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
@@ -519,8 +517,8 @@ export default function Comments<T extends CommentItem>({
       </AnimatePresence>
       </div>
 
-      {/* ===== 评论列表：项目场景在分割线下、位于输入区上方；其余场景正常展示 ===== */}
-      <div ref={listRef} className={kind === "project" ? "order-1 mt-3 min-w-0" : "mt-3"}>
+      {/* ===== 评论列表：项目场景在输入区上方、区域内滚动；其余场景正常展示 ===== */}
+      <div ref={listRef} className={kind === "project" ? "order-1 min-h-0 overflow-y-auto mt-0" : "mt-3"}>
             {showErrorRetry && loadError && (
               <div className="text-center py-8 md:py-12 text-slate-400">
                 <MessageCircle className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 md:mb-3 opacity-40" />

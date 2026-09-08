@@ -285,7 +285,9 @@ function ProjectDetailModal({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 md:px-7 py-5 flex flex-col space-y-5">
+            <div className="flex-1 min-h-0 flex flex-col">
+              {/* 顶部信息滚动区 */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-7 pt-5 pb-3 space-y-5">
               <div>
                 <h2 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
                   {project.name}
@@ -379,11 +381,12 @@ function ProjectDetailModal({
                 发表于 {formatDateCN(new Date(project.created_at))}
               </div>
 
-              {/* 分割线：分割线下方紧贴评论详情（含"暂无评论"提示） */}
-              <div className="border-t border-slate-100 dark:border-slate-800" />
+              {/* 分割线：位于"发表于"下方，内容不足时靠底贴齐评论区 */}
+              <div className="border-t border-slate-100 dark:border-slate-800 mt-auto" />
+              </div>
 
-              {/* 评论详情：紧贴分割线下方 */}
-              <div className="pt-3">
+              {/* 评论区：列表在上（内滚），输入框固定在弹窗最底部 */}
+              <div className="shrink-0 max-h-[55%] min-h-[150px] overflow-hidden flex flex-col bg-white dark:bg-slate-900 px-5 md:px-7 pt-1">
                 <ProjectComments projectId={project.id} initialLikes={project.likes} />
               </div>
             </div>
