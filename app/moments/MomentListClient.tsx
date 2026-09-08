@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { MapPin, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Clock } from 'lucide-react';
+import { MapPin, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Clock, Heart, MessageSquare } from 'lucide-react';
 import CommentAuthProvider from "@/components/providers/CommentAuthProvider";
+import { useEntityLike } from "@/components/useEntityLike";
 import { relativeTime, formatDateCN } from "@/app/lib/format";
 import MomentComments from './MomentComments';
 import PageHeader from "@/components/ui/PageHeader";
@@ -28,12 +29,63 @@ function timeAgo(dateStr: string) {
   });
 }
 
+/**
+ * 说说卡片底部操作区：♡ 点赞 + 💬 评论。
+ * 位置与样式保持最初的设计（卡片底部一行，右侧圆形按钮 + 数字）。
+ * 点 💬 展开该说说的评论输入框与评论列表。
+ */
+function MomentActions({
+  moment,
+  commentCount,
+  commentsOpen,
+  onToggleComments,
+}: {
+  moment: Moment;
+  commentCount: number;
+  commentsOpen: boolean;
+  onToggleComments: () => void;
+}) {
+  const { likes, liked, busy, toggle } = useEntityLike("chatter", moment.id, moment.likes);
+  return (
+    <div className="flex items-center gap-2 md:gap-3 shrink-0">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={busy}
+        aria-label="点赞"
+        className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0 rounded-full transition-all shadow-sm cursor-pointer ${liked ? 'bg-rose-500 text-white shadow-rose-500/30 scale-110' : 'bg-white/80 dark:bg-slate-800 text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+      >
+        <Heart size={14} className={`md:w-4 md:h-4 ${liked ? 'fill-current' : ''}`} />
+      </button>
+      {likes > 0 && (
+        <span className="text-xs md:text-sm font-bold text-slate-400 min-w-[16px] text-left">{likes}</span>
+      )}
+
+      <button
+        type="button"
+        onClick={onToggleComments}
+        aria-label="评论"
+        className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0 rounded-full transition-all shadow-sm cursor-pointer ${commentsOpen ? 'bg-indigo-500 text-white shadow-indigo-500/30 rotate-12' : 'bg-white/80 dark:bg-slate-800 text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+      >
+        <MessageSquare size={14} className="md:w-4 md:h-4" />
+      </button>
+      {commentCount > 0 && (
+        <span className="text-xs md:text-sm font-bold text-slate-400 min-w-[16px] text-left">{commentCount}</span>
+      )}
+    </div>
+  );
+}
+
 export default function MomentListClient({ initialMoments }: { initialMoments: Moment[] }) {
   const [moments] = useState<Moment[]>(initialMoments);
   const [loading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [lightbox, setLightbox] = useState<{ images: string[], index: number } | null>(null);
+  // 展开评论区的说说：默认不展开（不显示评论输入框与评论列表）
+  const [openCommentId, setOpenCommentId] = useState<string | null>(null);
+  // 评论数：发表后由评论区回传更新，默认用列表自带的 comments_count
+  const [commentCountMap, setCommentCountMap] = useState<Record<string, number>>({});
 
   const processedMoments = useMemo(() => {
     let result = [...moments];
@@ -122,26 +174,53 @@ export default function MomentListClient({ initialMoments }: { initialMoments: M
 
       {renderImages(moment.images)}
 
-      <div className="mt-5 md:mt-8 flex items-center gap-1.5 md:gap-2">
-        <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 shrink-0 border border-slate-500/10">
-          <Clock size={10} className="md:w-3 md:h-3 shrink-0" />
-          {timeAgo(moment.date)}
-        </span>
-        {moment.location && (
-          <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 max-w-full truncate border border-indigo-500/10">
-            <MapPin size={10} className="md:w-3 md:h-3 shrink-0" />
-            <span className="truncate">{moment.location}</span>
+      {/* 底部一行：左侧时间/地点，右侧 ♡点赞 + 💬评论（最初位置） */}
+      <div className="mt-5 md:mt-10 flex items-center justify-between gap-2 md:gap-3">
+        <div className="min-w-0 flex-1 pr-2 flex items-center gap-1.5 md:gap-2">
+          <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 shrink-0 border border-slate-500/10">
+            <Clock size={10} className="md:w-3 md:h-3 shrink-0" />
+            {timeAgo(moment.date)}
           </span>
-        )}
-      </div>
+          {moment.location && (
+            <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 max-w-full truncate border border-indigo-500/10">
+              <MapPin size={10} className="md:w-3 md:h-3 shrink-0" />
+              <span className="truncate">{moment.location}</span>
+            </span>
+          )}
+        </div>
 
-      <div className="mt-4 md:mt-6">
-        <MomentComments
-          chatterId={moment.id}
-          initialLikes={moment.likes}
-          initialCommentCount={moment.comments_count}
+        <MomentActions
+          moment={moment}
+          commentCount={commentCountMap[moment.id] ?? moment.comments_count}
+          commentsOpen={openCommentId === moment.id}
+          onToggleComments={() =>
+            setOpenCommentId(openCommentId === moment.id ? null : moment.id)
+          }
         />
       </div>
+
+      {/* 点 💬 展开：评论输入框 + 评论列表 */}
+      <AnimatePresence>
+        {openCommentId === moment.id && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-4 md:pt-5">
+              <MomentComments
+                chatterId={moment.id}
+                initialLikes={moment.likes}
+                initialCommentCount={commentCountMap[moment.id] ?? moment.comments_count}
+                onCountChange={(n) =>
+                  setCommentCountMap((m) => ({ ...m, [moment.id]: n }))
+                }
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 

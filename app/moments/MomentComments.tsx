@@ -17,10 +17,12 @@ export default function MomentComments({
   chatterId,
   initialLikes,
   initialCommentCount,
+  onCountChange,
 }: {
   chatterId: string;
   initialLikes?: number;
   initialCommentCount?: number;
+  onCountChange?: (n: number) => void;
 }) {
   return (
     <Comments<ChatterCommentItem>
@@ -28,6 +30,9 @@ export default function MomentComments({
       kind="moment"
       initialLikes={initialLikes}
       initialCommentCount={initialCommentCount}
+      // 说说的 💬/♡ 由卡片底部（原位置）承载，评论区不再重复渲染
+      hideActions
+      onCountChange={onCountChange}
       getComments={getChatterComments}
       createComment={(d) =>
         createChatterComment({

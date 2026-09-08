@@ -374,13 +374,16 @@ function ProjectDetailModal({
                 </div>
               )}
 
-              {/* 发表时间：内容下方、分割线上方 */}
+              {/* 发表时间 */}
               <div className="text-[11px] text-slate-400">
                 发表于 {formatDateCN(new Date(project.created_at))}
               </div>
 
-              {/* 评论区固定在弹窗底部（滚动时吸底） */}
-              <div className="mt-auto sticky bottom-0 z-10 -mx-5 md:-mx-7 px-5 md:px-7 pt-3 pb-1 border-t border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+              {/* 分割线：分割线下方为评论详情 */}
+              <div className="border-t border-slate-100 dark:border-slate-800" />
+
+              {/* 评论详情（分割线下方，内容不足时靠底部） */}
+              <div className="mt-auto pt-3">
                 <ProjectComments projectId={project.id} initialLikes={project.likes} />
               </div>
             </div>
