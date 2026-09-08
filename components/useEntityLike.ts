@@ -57,10 +57,10 @@ export function useEntityLike(
       setLikes(res.likes);
       setLiked(res.liked);
     } catch {
-      // 失败回滚（未登录/令牌失效时提示登录）
+      // 失败回滚；仅当确实未登录/令牌失效时才提示登录（网络错误不误弹）
       setLiked(!next);
       setLikes((p) => Math.max(0, p + (next ? -1 : 1)));
-      openLogin();
+      if (!user) openLogin();
     } finally {
       setBusy(false);
     }
