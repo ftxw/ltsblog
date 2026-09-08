@@ -14,7 +14,6 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import SafeImage from "@/components/ui/SafeImage";
 import { relativeTime, flattenReplies } from "@/app/lib/format";
 import { useCommentAuth } from "@/components/providers/CommentAuthProvider";
 import { useEntityLike } from "@/components/useEntityLike";
@@ -315,7 +314,15 @@ export default function Comments<T extends CommentItem>({
   const loggedIn = Boolean(user);
 
   return (
-    <div>
+    <div className={kind === "project" ? "flex flex-col" : ""}>
+      {/* ===== 输入区：项目场景吸底固定在弹窗底部，其余场景正常流式 ===== */}
+      <div
+        className={
+          kind === "project"
+            ? "order-2 sticky bottom-0 z-10 pt-2 -mx-5 md:-mx-7 px-5 md:px-7 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-100 dark:border-slate-800"
+            : ""
+        }
+      >
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
       <div className="flex items-center">
         <div
@@ -510,9 +517,10 @@ export default function Comments<T extends CommentItem>({
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
-      {/* ===== 评论列表：文章/项目始终展示；说说由卡片控制渲染 ===== */}
-      <div ref={listRef} className="mt-3">
+      {/* ===== 评论列表：项目场景在分割线下、位于输入区上方；其余场景正常展示 ===== */}
+      <div ref={listRef} className={kind === "project" ? "order-1 mt-3 min-w-0" : "mt-3"}>
             {showErrorRetry && loadError && (
               <div className="text-center py-8 md:py-12 text-slate-400">
                 <MessageCircle className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 md:mb-3 opacity-40" />
@@ -594,19 +602,10 @@ function CommentCard({
     <div className="rounded-2xl bg-white/50 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
       <div className="p-3 md:p-5">
         <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-          {comment.email_user_avatar ? (
-            <SafeImage
-              src={comment.email_user_avatar}
-              alt={comment.email_user_name}
-              width={32}
-              height={32}
-              className="rounded-full md:w-9 md:h-9"
-            />
-          ) : (
-            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-700 flex items-center justify-center text-white text-xs md:text-sm font-bold">
-              ?
-            </div>
-          )}
+          {/* 头像：昵称首字（与评论输入框风格一致） */}
+          <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-xs md:text-sm font-bold shrink-0">
+            {(comment.email_user_name || "匿").slice(0, 1).toUpperCase()}
+          </div>
           <div className="flex-1 min-w-0">
             <span className="text-xs md:text-sm font-semibold text-slate-800 dark:text-slate-200">
               {comment.email_user_name || "匿名用户"}
@@ -701,19 +700,10 @@ function ReplyCard({
   return (
     <div className="px-3 py-2 md:px-5 md:py-3 border-b border-slate-200/30 dark:border-white/5 last:border-0">
       <div className="flex items-start gap-2 md:gap-3">
-        {reply.email_user_avatar ? (
-          <SafeImage
-            src={reply.email_user_avatar}
-            alt={reply.email_user_name}
-            width={24}
-            height={24}
-            className="rounded-full mt-0.5 md:w-7 md:h-7"
-          />
-        ) : (
-          <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-700 flex items-center justify-center text-white text-[10px] md:text-xs font-bold mt-0.5">
-            ?
-          </div>
-        )}
+        {/* 头像：昵称首字 */}
+        <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-[10px] md:text-xs font-bold mt-0.5 shrink-0">
+          {(reply.email_user_name || "匿").slice(0, 1).toUpperCase()}
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
             <span className="text-[10px] md:text-xs font-semibold text-slate-700 dark:text-slate-300">

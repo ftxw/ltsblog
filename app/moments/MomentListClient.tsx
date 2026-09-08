@@ -209,28 +209,19 @@ export default function MomentListClient({ initialMoments }: { initialMoments: M
         />
       </div>
 
-      {/* 点 💬 展开：评论输入框 + 评论列表 */}
-      <AnimatePresence>
-        {openCommentId === moment.id && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="pt-4 md:pt-5">
-              <MomentComments
-                chatterId={moment.id}
-                initialLikes={moment.likes}
-                initialCommentCount={commentCountMap[moment.id] ?? moment.comments_count}
-                onCountChange={(n) =>
-                  setCommentCountMap((m) => ({ ...m, [moment.id]: n }))
-                }
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 点 💬 展开：评论输入框 + 评论列表（不做高度动画，避免展开卡顿） */}
+      {openCommentId === moment.id && (
+        <div className="pt-4 md:pt-5">
+          <MomentComments
+            chatterId={moment.id}
+            initialLikes={moment.likes}
+            initialCommentCount={commentCountMap[moment.id] ?? moment.comments_count}
+            onCountChange={(n) =>
+              setCommentCountMap((m) => ({ ...m, [moment.id]: n }))
+            }
+          />
+        </div>
+      )}
     </motion.div>
   );
 
