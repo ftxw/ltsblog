@@ -140,9 +140,26 @@ export default function Comments<T extends CommentItem>({
   const listRef = useRef<HTMLDivElement>(null);
   const [composing, setComposing] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
-  // 浮动表情面板：按钮屏幕坐标 + 按钮 ref
+  // 浮动表情面板：按钮屏幕坐标 + 面板 ref（高度需实测才能贴近按钮）
   const [emojiPos, setEmojiPos] = useState<{ left: number; top: number } | null>(null);
   const emojiBtnRef = useRef<HTMLButtonElement>(null);
+  const emojiPanelRef = useRef<HTMLDivElement>(null);
+  const emojiBtnRectRef = useRef<{ left: number; top: number; bottom: number } | null>(null);
+
+  // 面板渲染后按实际高度贴到按钮上方（8px 间距）；顶部放不下则放按钮下方
+  useEffect(() => {
+    if (!showEmoji) return;
+    const rect = emojiBtnRectRef.current;
+    const panel = emojiPanelRef.current;
+    if (!rect || !panel) return;
+    const h = panel.offsetHeight;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - 316));
+    let top = rect.top - h - 8;
+    if (top < 8) {
+      top = Math.min(rect.bottom + 8, Math.max(8, window.innerHeight - h - 8));
+    }
+    setEmojiPos({ left, top });
+  }, [showEmoji]);
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
   const [likedCommentIds, setLikedCommentIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
@@ -346,7 +363,7 @@ export default function Comments<T extends CommentItem>({
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
-  /** 打开/关闭浮动表情面板（记录按钮屏幕坐标，fixed 定位 + portal 到 body） */
+  /** 打开/关闭浮动表情面板（记录按钮位置，面板渲染后贴近按钮定位） */
   function toggleEmoji() {
     if (showEmoji) {
       setShowEmoji(false);
@@ -355,11 +372,9 @@ export default function Comments<T extends CommentItem>({
     const btn = emojiBtnRef.current;
     if (btn) {
       const r = btn.getBoundingClientRect();
-      setEmojiPos({
-        left: Math.max(8, Math.min(r.left, window.innerWidth - 316)),
-        top: Math.max(8, r.top - 240), // 面板高约 200，默认浮在按钮上方
-      });
+      emojiBtnRectRef.current = { left: r.left, top: r.top, bottom: r.bottom };
     }
+    setEmojiPos(null);
     setShowEmoji(true);
   }
 
@@ -554,7 +569,10 @@ export default function Comments<T extends CommentItem>({
               style={{ left: emojiPos.left, top: emojiPos.top }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-2 grid grid-cols-10 gap-0.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl max-h-44 overflow-y-auto">
+              <div
+                ref={emojiPanelRef}
+                className="p-2 grid grid-cols-10 gap-0.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl max-h-44 overflow-y-auto"
+              >
                 {EMOJIS.map((e) => (
                   <button
                     key={e}
