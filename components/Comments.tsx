@@ -324,7 +324,7 @@ export default function Comments<T extends CommentItem>({
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
       <div className="flex items-center">
         <div
-          className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border px-2.5 md:px-3 py-1 md:py-1.5 transition-colors ${
+          className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border pl-1.5 pr-2.5 md:pl-2 md:pr-3 py-0.5 md:py-1 transition-colors ${
             composing && loggedIn
               ? "border-indigo-300 dark:border-indigo-500/50"
               : "border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
@@ -337,10 +337,16 @@ export default function Comments<T extends CommentItem>({
             className="shrink-0 rounded-full overflow-hidden"
             aria-label="头像"
           >
-            <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-xs md:text-sm font-bold">
+            <div
+              className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold ${
+                loggedIn
+                  ? "bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 text-white text-xs md:text-sm"
+                  : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-300"
+              }`}
+            >
               {loggedIn
                 ? (user!.nickname || user!.email || "?").slice(0, 1).toUpperCase()
-                : <UserRound className="w-3.5 h-3.5 md:w-4 md:h-4" />}
+                : <UserRound className="w-4 h-4" />}
             </div>
           </button>
 
@@ -545,8 +551,8 @@ export default function Comments<T extends CommentItem>({
             )}
 
             {!commentsLoading && comments.length === 0 && !loadError && (
-              <div className="text-center py-8 text-xs md:text-sm text-slate-400">
-                还没有评论，来抢沙发吧
+              <div className="text-center py-3 text-xs md:text-sm text-slate-400">
+                暂时没有评论
               </div>
             )}
 
