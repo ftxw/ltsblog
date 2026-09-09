@@ -393,7 +393,7 @@ export default function Comments<T extends CommentItem>({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pt-1 pb-1.5 pl-2 md:pl-2.5">
+            <div className="pt-1 pb-1.5 pl-3 md:pl-4">
               {/* 第一行：回复 XXX（昵称与"回复"同色，输入框展开后无头像，文字靠左） */}
               <div className="text-[14px] font-medium text-slate-700 dark:text-slate-200">
                 回复 {replyTo.email_user_name || "匿名"}
@@ -411,7 +411,7 @@ export default function Comments<T extends CommentItem>({
         <div
           className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border transition-colors ${
             composing && loggedIn
-              ? "px-2 md:px-2.5 py-0.5 md:py-1 border-indigo-300 dark:border-indigo-500/50"
+              ? "px-3 md:px-3.5 py-0.5 md:py-1 border-indigo-300 dark:border-indigo-500/50"
               : "pl-0.5 pr-2 md:pl-1 md:pr-2.5 py-0.5 md:py-1 border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
           }`}
         >
@@ -449,7 +449,7 @@ export default function Comments<T extends CommentItem>({
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
                   handleSubmitComment();
               }}
-              className="flex-1 min-w-0 h-7 md:h-8 bg-transparent text-xs md:text-sm leading-[18px] md:leading-[20px] text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none"
+              className="flex-1 min-w-0 h-7 md:h-8 py-0 bg-transparent text-xs md:text-sm leading-[28px] md:leading-[32px] text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none"
             />
           ) : (
             <button
