@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Reply,
@@ -62,6 +63,11 @@ export interface CommentsProps<T extends CommentItem> {
   hideActions?: boolean;
   /** 挂载后自动展开输入框（说说：点 💬 后直接展开输入区 + 表情/发表/取消） */
   autoCompose?: boolean;
+  /**
+   * 输入框的外部挂载容器（项目详情用）：传入后，输入区会通过 portal
+   * 渲染到该节点（例如弹窗底部固定栏），而评论列表仍留在原滚动流中。
+   */
+  inputHostRef?: RefObject<HTMLElement | null>;
   /** 评论总数变化回调（供外部卡片同步 💬 数字） */
   onCountChange?: (n: number) => void;
 }
@@ -97,6 +103,7 @@ export default function Comments<T extends CommentItem>({
   initialCommentCount,
   hideActions = false,
   autoCompose = false,
+  inputHostRef,
   onCountChange,
 }: CommentsProps<T>) {
   const { user, openLogin } = useCommentAuth();
@@ -146,6 +153,13 @@ export default function Comments<T extends CommentItem>({
     setShowEmoji(false);
     setTimeout(() => inputRef.current?.focus(), 120);
   }, [autoCompose, user]);
+
+  // 输入区 portal 目标（项目详情：输入框渲染到弹窗底部固定栏）
+  const [inputHost, setInputHost] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!inputHostRef) return;
+    setInputHost(inputHostRef.current ?? null);
+  }, [inputHostRef]);
 
   // 加载评论（列表与总数）
   useEffect(() => {
@@ -313,14 +327,10 @@ export default function Comments<T extends CommentItem>({
 
   const loggedIn = Boolean(user);
 
-  return (
-    <div className={kind === "project" ? "flex-1 min-h-0 flex flex-col" : ""}>
-      {/* ===== 输入区：项目场景位于弹窗最底部固定，其余场景正常流式 ===== */}
-      <div
-        className={
-          kind === "project" ? "order-2 shrink-0 pt-1.5" : ""
-        }
-      >
+  // 项目详情：输入框通过 portal 渲染到弹窗底部固定栏，列表留在滚动流中
+  const usePortal = Boolean(inputHostRef);
+  const inputArea = (
+    <div className={kind === "project" ? "pt-1.5" : ""}>
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
       <div className="flex items-center">
         <div
@@ -525,15 +535,14 @@ export default function Comments<T extends CommentItem>({
           </motion.div>
         )}
       </AnimatePresence>
-      </div>
+    </div>
+  );
 
-      {/* ===== 评论列表：项目场景在输入区上方、区域内滚动；其余场景正常展示 ===== */}
-      <div ref={listRef} className={kind === "project" ? "order-1 min-h-0 overflow-y-auto mt-0" : "mt-3"}>
-            {kind === "project" && (
-              <div className="pb-1 text-xs md:text-[13px] text-slate-400">
-                共 {totalCount ?? 0} 条评论
-              </div>
-            )}
+  return (
+    <div>
+      {!usePortal && inputArea}
+      {/* ===== 评论列表 ===== */}
+      <div ref={listRef} className={kind === "project" ? "mt-0" : "mt-3"}>
             {showErrorRetry && loadError && (
               <div className="text-center py-8 md:py-12 text-slate-400">
                 <MessageCircle className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 md:mb-3 opacity-40" />
@@ -589,6 +598,8 @@ export default function Comments<T extends CommentItem>({
               </div>
             )}
       </div>
+      {/* 项目详情：输入区渲染到弹窗底部固定栏 */}
+      {inputHost ? createPortal(inputArea, inputHost) : null}
     </div>
   );
 }

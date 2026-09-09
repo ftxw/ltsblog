@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, ChevronLeft, ChevronRight, Clock, GitBranch, GitFork, Globe, X } from "lucide-react";
 import SafeImage from "@/components/ui/SafeImage";
@@ -163,6 +163,8 @@ function ProjectDetailModal({
   const [idx, setIdx] = useState(0);
   // 点击轮播图 → 全屏查看当前原图
   const [fullImg, setFullImg] = useState<string | null>(null);
+  // 弹窗底部固定输入区的宿主节点（评论输入区 portal 到这里）
+  const inputHostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -381,14 +383,22 @@ function ProjectDetailModal({
                 发表于 {formatDateCN(new Date(project.created_at))}
               </div>
 
-              {/* 分割线：位于"发表于"下方，内容不足时靠底贴齐评论区 */}
-              <div className="border-t border-slate-100 dark:border-slate-800 mt-auto" />
+              {/* 分割线：位于"发表于"下方，下方为评论列表 */}
+              <div className="border-t border-slate-100 dark:border-slate-800" />
+
+              {/* 评论列表：在滚动流内，位于分割线下方 */}
+              <ProjectComments
+                projectId={project.id}
+                initialLikes={project.likes}
+                inputHostRef={inputHostRef}
+              />
               </div>
 
-              {/* 评论区：列表在上（内滚），输入框固定在弹窗最底部 */}
-              <div className="shrink-0 max-h-[55%] min-h-[150px] overflow-hidden flex flex-col bg-white dark:bg-slate-900 px-5 md:px-7 pt-1">
-                <ProjectComments projectId={project.id} initialLikes={project.likes} />
-              </div>
+              {/* 评论输入框：与弹窗一体，固定在最底部（输入区由 Comments portal 进来） */}
+              <div
+                ref={inputHostRef}
+                className="shrink-0 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 md:px-7 py-2"
+              />
             </div>
           </div>
         </motion.div>
