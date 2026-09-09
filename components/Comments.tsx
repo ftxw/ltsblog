@@ -467,15 +467,15 @@ export default function Comments<T extends CommentItem>({
                   className="overflow-hidden"
                 >
                   <div className="pt-2">
-                    {/* 第一行：回复 XXX（无图标、无关闭按钮） */}
-                    <div className="text-sm md:text-base font-medium text-slate-700 dark:text-slate-200">
+                    {/* 第一行：回复 XXX（原 10/12px +2px = 12/14px） */}
+                    <div className="text-[12px] md:text-[14px] font-medium text-slate-700 dark:text-slate-200">
                       回复{" "}
                       <span className="text-sky-600 dark:text-sky-400 font-semibold">
                         {replyTo.email_user_name || "匿名"}
                       </span>
                     </div>
                     {/* 第二行：回复内容预览 */}
-                    <div className="mt-0.5 text-xs md:text-sm text-slate-500 dark:text-slate-400 truncate">
+                    <div className="mt-0.5 text-[12px] md:text-[14px] text-slate-500 dark:text-slate-400 truncate">
                       {replyTo.content}
                     </div>
                   </div>
@@ -651,10 +651,10 @@ function CommentCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[13px] md:text-[15px] font-medium text-slate-700 dark:text-slate-200 truncate">
+              <span className="text-[13px] md:text-[14px] font-medium text-slate-700 dark:text-slate-200 truncate">
                 {nameText}
               </span>
-              <span className="text-[13px] md:text-[15px] text-slate-400 dark:text-slate-500 shrink-0">
+              <span className="text-[13px] md:text-[14px] text-slate-400 dark:text-slate-500 shrink-0">
                 {relativeTime(comment.created_at)}
               </span>
             </div>
@@ -838,10 +838,10 @@ function ReplyCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[13px] md:text-[15px] font-medium text-slate-700 dark:text-slate-200 truncate">
+              <span className="text-[13px] md:text-[14px] font-medium text-slate-700 dark:text-slate-200 truncate">
                 {nameText}
               </span>
-              <span className="text-[13px] md:text-[15px] text-slate-400 dark:text-slate-500 shrink-0">
+              <span className="text-[13px] md:text-[14px] text-slate-400 dark:text-slate-500 shrink-0">
                 {relativeTime(reply.created_at)}
               </span>
             </div>
