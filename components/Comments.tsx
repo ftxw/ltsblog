@@ -449,7 +449,7 @@ export default function Comments<T extends CommentItem>({
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
                   handleSubmitComment();
               }}
-              className="flex-1 min-w-0 h-7 md:h-8 pt-[6px] md:pt-[8px] pb-0 bg-transparent text-xs md:text-sm leading-4 text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none overflow-hidden outline-none"
+              className="flex-1 min-w-0 h-7 md:h-8 pt-[6px] md:pt-[8px] pb-0 bg-transparent text-center text-xs md:text-sm leading-4 text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none overflow-hidden outline-none"
             />
           ) : (
             <button
