@@ -467,15 +467,15 @@ export default function Comments<T extends CommentItem>({
                   className="overflow-hidden"
                 >
                   <div className="pt-2">
-                    {/* 第一行：回复 XXX（原 10/12px +2px = 12/14px） */}
-                    <div className="text-[12px] md:text-[14px] font-medium text-slate-700 dark:text-slate-200">
+                    {/* 第一行：回复 XXX */}
+                    <div className="text-[14px] font-medium text-slate-700 dark:text-slate-200">
                       回复{" "}
                       <span className="text-sky-600 dark:text-sky-400 font-semibold">
                         {replyTo.email_user_name || "匿名"}
                       </span>
                     </div>
-                    {/* 第二行：回复内容预览 */}
-                    <div className="mt-0.5 text-[12px] md:text-[14px] text-slate-500 dark:text-slate-400 truncate">
+                    {/* 第二行：回复内容预览（与第一行同为 14px） */}
+                    <div className="mt-0.5 text-[14px] text-slate-500 dark:text-slate-400 truncate">
                       {replyTo.content}
                     </div>
                   </div>
