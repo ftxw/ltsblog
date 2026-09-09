@@ -514,7 +514,7 @@ export default function Comments<T extends CommentItem>({
                 <button
                   type="button"
                   onClick={cancelCompose}
-                  className="min-w-[64px] px-4 py-1.5 rounded-full text-xs md:text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="min-w-[64px] px-4 py-1.5 rounded-full text-xs md:text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   取消
                 </button>
