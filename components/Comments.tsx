@@ -539,8 +539,6 @@ export default function Comments<T extends CommentItem>({
                 </button>
               </div>
             </div>
-
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
