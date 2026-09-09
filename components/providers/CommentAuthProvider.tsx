@@ -292,7 +292,7 @@ function CommentLoginModal() {
                     placeholder="昵称（最多 20 字）"
                     maxLength={20}
                     required
-                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent pl-9 pr-3 py-2 text-sm outline-none focus:border-indigo-400"
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent pl-9 pr-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-indigo-400"
                   />
                 </div>
               )}
@@ -305,7 +305,7 @@ function CommentLoginModal() {
                   placeholder="邮箱"
                   autoComplete="username"
                   required
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent pl-9 pr-3 py-2 text-sm outline-none focus:border-indigo-400"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent pl-9 pr-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-indigo-400"
                 />
               </div>
               <div className="relative">
@@ -317,7 +317,7 @@ function CommentLoginModal() {
                   placeholder={mode === "register" ? "密码（至少 6 位）" : "密码"}
                   autoComplete="current-password"
                   required
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent pl-9 pr-3 py-2 text-sm outline-none focus:border-indigo-400"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent pl-9 pr-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-indigo-400"
                 />
               </div>
 

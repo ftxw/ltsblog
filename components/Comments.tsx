@@ -398,7 +398,9 @@ export default function Comments<T extends CommentItem>({
               aria-label="评论"
             >
               <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
-              <span className="tabular-nums">{totalCount ?? 0}</span>
+              <span className="tabular-nums">
+                {(totalCount ?? 0) > 0 ? totalCount : "评论"}
+              </span>
             </button>
 
             {/* ♡ 点赞 */}
@@ -420,7 +422,9 @@ export default function Comments<T extends CommentItem>({
                   entityLiked ? "fill-pink-500 scale-110" : ""
                 }`}
               />
-              <span className="tabular-nums">{entityLikes}</span>
+              <span className="tabular-nums">
+                {entityLikes > 0 ? entityLikes : "点赞"}
+              </span>
             </button>
           </>
         )}
@@ -580,7 +584,7 @@ export default function Comments<T extends CommentItem>({
                   <CommentCard
                     key={comment.id}
                     comment={comment}
-                    flat={kind === "project"}
+                    flat
                     expandedReplies={expandedReplies}
                     onReply={startReply}
                     onToggleReplies={(id) =>
@@ -624,6 +628,8 @@ function CommentCard({
   const isExpanded = expandedReplies.has(comment.id);
   const flatReplies = flattenReplies(comment.replies ?? []);
   const replyCount = flatReplies.length;
+  // 二级评论默认只展示第一条，其余折叠
+  const restCount = Math.max(0, replyCount - 1);
 
   const nameText = comment.email_user_name || "匿名用户";
 
@@ -662,7 +668,7 @@ function CommentCard({
                     likedCommentIds.has(comment.id) ? "fill-pink-500" : ""
                   }`}
                 />
-                <span>{comment.likes}</span>
+                <span>{comment.likes > 0 ? comment.likes : "点赞"}</span>
               </button>
               <button
                 type="button"
@@ -670,32 +676,42 @@ function CommentCard({
                 className="flex items-center gap-1 hover:text-sky-500 transition-colors cursor-pointer"
               >
                 <MessageCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                <span>回复</span>
+                <span>{replyCount > 0 ? replyCount : "回复"}</span>
               </button>
-              {replyCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => onToggleReplies(comment.id)}
-                  className="ml-auto hover:text-indigo-500 transition-colors cursor-pointer"
-                >
-                  {isExpanded ? "收起回复" : `${replyCount} 条回复`}
-                </button>
-              )}
             </div>
           </div>
         </div>
-        {isExpanded && replyCount > 0 && (
+        {replyCount > 0 && (
           <div className="mt-1 pl-10 md:pl-[52px]">
-            {flatReplies.map((reply) => (
-              <ReplyCard
-                key={reply.id}
-                reply={reply}
-                flat
-                onReply={onReply}
-                likedCommentIds={likedCommentIds}
-                onCommentLike={onCommentLike}
-              />
-            ))}
+            <ReplyCard
+              reply={flatReplies[0]}
+              flat
+              onReply={onReply}
+              likedCommentIds={likedCommentIds}
+              onCommentLike={onCommentLike}
+            />
+            {restCount > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onToggleReplies(comment.id)}
+                  className="text-[11px] md:text-xs text-slate-400 hover:text-indigo-500 transition-colors py-1 cursor-pointer"
+                >
+                  {isExpanded ? "收起回复" : `展开其余 ${restCount} 条回复`}
+                </button>
+                {isExpanded &&
+                  flatReplies.slice(1).map((reply) => (
+                    <ReplyCard
+                      key={reply.id}
+                      reply={reply}
+                      flat
+                      onReply={onReply}
+                      likedCommentIds={likedCommentIds}
+                      onCommentLike={onCommentLike}
+                    />
+                  ))}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -811,7 +827,7 @@ function ReplyCard({
     return (
       <div className="py-2">
         <div className="flex items-start gap-2">
-          <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-[10px] md:text-xs font-bold mt-0.5 shrink-0">
+          <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-[10px] md:text-xs font-bold mt-0.5 shrink-0">
             {(reply.email_user_name || "匿").slice(0, 1).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
@@ -846,7 +862,7 @@ function ReplyCard({
                     likedCommentIds.has(reply.id) ? "fill-pink-500" : ""
                   }`}
                 />
-                <span>{reply.likes}</span>
+                <span>{reply.likes > 0 ? reply.likes : "点赞"}</span>
               </button>
               <button
                 type="button"
