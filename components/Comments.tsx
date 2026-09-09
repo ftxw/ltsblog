@@ -349,6 +349,30 @@ export default function Comments<T extends CommentItem>({
   const usePortal = Boolean(inputHostRef);
   const inputArea = (
     <div className={kind === "project" ? "pt-1.5" : ""}>
+      {/* ===== 回复横幅：位于输入框上方（两行 14px，左缘与输入文字对齐） ===== */}
+      <AnimatePresence>
+        {composing && loggedIn && replyTo && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-1 pb-1.5 pl-9 md:pl-11">
+              <div className="text-[14px] font-medium text-slate-700 dark:text-slate-200">
+                回复{" "}
+                <span className="text-sky-600 dark:text-sky-400 font-semibold">
+                  {replyTo.email_user_name || "匿名"}
+                </span>
+              </div>
+              <div className="mt-0.5 text-[14px] text-slate-500 dark:text-slate-400 truncate">
+                {replyTo.content}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
       <div className="flex items-center">
         <div
@@ -458,31 +482,6 @@ export default function Comments<T extends CommentItem>({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <AnimatePresence>
-              {replyTo && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-2 pl-9 md:pl-11">
-                    {/* 第一行：回复 XXX（与输入框内文字左侧对齐） */}
-                    <div className="text-[14px] font-medium text-slate-700 dark:text-slate-200">
-                      回复{" "}
-                      <span className="text-sky-600 dark:text-sky-400 font-semibold">
-                        {replyTo.email_user_name || "匿名"}
-                      </span>
-                    </div>
-                    {/* 第二行：回复内容预览（与第一行同为 14px） */}
-                    <div className="mt-0.5 text-[14px] text-slate-500 dark:text-slate-400 truncate">
-                      {replyTo.content}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             <div className="mt-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-1 md:gap-2">
                 <button
