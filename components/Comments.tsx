@@ -393,7 +393,7 @@ export default function Comments<T extends CommentItem>({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pt-1 pb-1.5 pl-1 md:pl-1.5">
+            <div className="pt-1 pb-1.5 pl-2 md:pl-2.5">
               {/* 第一行：回复 XXX（昵称与"回复"同色，输入框展开后无头像，文字靠左） */}
               <div className="text-[14px] font-medium text-slate-700 dark:text-slate-200">
                 回复 {replyTo.email_user_name || "匿名"}
@@ -409,10 +409,10 @@ export default function Comments<T extends CommentItem>({
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
       <div className="flex items-center">
         <div
-          className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border pl-0.5 pr-2 md:pl-1 md:pr-2.5 py-0.5 md:py-1 transition-colors ${
+          className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border transition-colors ${
             composing && loggedIn
-              ? "border-indigo-300 dark:border-indigo-500/50"
-              : "border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
+              ? "px-2 md:px-2.5 py-0.5 md:py-1 border-indigo-300 dark:border-indigo-500/50"
+              : "pl-0.5 pr-2 md:pl-1 md:pr-2.5 py-0.5 md:py-1 border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
           }`}
         >
           {/* 头像：仅在未展开输入时显示（输入框内部左侧，使用昵称首字） */}
