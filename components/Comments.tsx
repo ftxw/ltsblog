@@ -490,8 +490,8 @@ export default function Comments<T extends CommentItem>({
                   onClick={() => setShowEmoji((v) => !v)}
                   className={`p-1.5 rounded-full transition-colors cursor-pointer ${
                     showEmoji
-                      ? "text-amber-500 bg-amber-50 dark:bg-amber-500/10"
-                      : "text-slate-400 hover:text-amber-500"
+                      ? "bg-indigo-50 dark:bg-slate-800 text-slate-500 dark:text-slate-300"
+                      : "text-slate-400 dark:text-slate-500 hover:bg-indigo-50 dark:hover:bg-slate-800"
                   }`}
                   title="插入表情"
                 >
