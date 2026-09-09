@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 interface PostContentProps {
@@ -257,12 +258,14 @@ export default function PostContent({ contentHtml, highlightKeyword }: PostConte
         />
       </div>
 
-      {/* 图片灯箱 */}
-      {lightboxSrc && (
-        <div
-          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
-          onClick={() => setLightboxSrc(null)}
-        >
+      {/* 图片灯箱：portal 到 document.body，避免被正文卡片的 backdrop-blur 包含块限制（否则只在内容栏内“伪全屏”） */}
+      {typeof document !== "undefined" &&
+        lightboxSrc &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[999] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+            onClick={() => setLightboxSrc(null)}
+          >
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -279,8 +282,9 @@ export default function PostContent({ contentHtml, highlightKeyword }: PostConte
             alt="预览大图"
             className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
           />
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }

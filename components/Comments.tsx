@@ -466,24 +466,18 @@ export default function Comments<T extends CommentItem>({
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="flex items-center gap-1.5 pt-2 text-[10px] md:text-xs text-slate-500 dark:text-slate-400">
-                    <Reply className="w-3 h-3" />
-                    <span>
+                  <div className="pt-2">
+                    {/* 第一行：回复 XXX（无图标、无关闭按钮） */}
+                    <div className="text-sm md:text-base font-medium text-slate-700 dark:text-slate-200">
                       回复{" "}
-                      <span className="font-medium text-sky-600 dark:text-sky-400">
+                      <span className="text-sky-600 dark:text-sky-400 font-semibold">
                         {replyTo.email_user_name || "匿名"}
                       </span>
-                    </span>
-                    <span className="truncate flex-1 opacity-60 ml-1">
-                      {replyTo.content.slice(0, 40)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={cancelCompose}
-                      className="text-slate-400 hover:text-red-500 transition-colors shrink-0 cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                    </div>
+                    {/* 第二行：回复内容预览 */}
+                    <div className="mt-0.5 text-xs md:text-sm text-slate-500 dark:text-slate-400 truncate">
+                      {replyTo.content}
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -510,23 +504,19 @@ export default function Comments<T extends CommentItem>({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={cancelCompose}
-                  className="px-3 py-1.5 rounded-full text-xs md:text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                  onClick={handleSubmitComment}
+                  disabled={!commentInput.trim() || submitting}
+                  className="flex items-center justify-center min-w-[64px] px-4 py-1.5 rounded-full bg-indigo-600 text-xs md:text-sm font-medium text-white hover:bg-indigo-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  取消
+                  {submitting && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                  发送
                 </button>
                 <button
                   type="button"
-                  onClick={handleSubmitComment}
-                  disabled={!commentInput.trim() || submitting}
-                  className="flex items-center gap-1 px-4 py-1.5 rounded-full bg-indigo-600 text-xs md:text-sm font-medium text-white hover:bg-indigo-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  onClick={cancelCompose}
+                  className="min-w-[64px] px-4 py-1.5 rounded-full text-xs md:text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  {submitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-3.5 h-3.5" />
-                  )}
-                  发表
+                  取消
                 </button>
               </div>
             </div>
@@ -661,17 +651,17 @@ function CommentCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs md:text-[13px] font-medium text-slate-500 dark:text-slate-400 truncate">
+              <span className="text-[13px] md:text-[15px] font-medium text-slate-700 dark:text-slate-200 truncate">
                 {nameText}
               </span>
-              <span className="text-[10px] md:text-xs text-slate-300 dark:text-slate-600 shrink-0">
+              <span className="text-[13px] md:text-[15px] text-slate-400 dark:text-slate-500 shrink-0">
                 {relativeTime(comment.created_at)}
               </span>
             </div>
             <p className="mt-1 text-[13px] md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words">
               {comment.content}
             </p>
-            <div className="mt-1.5 md:mt-2 flex items-center gap-4 md:gap-5 text-[11px] md:text-xs text-slate-400">
+            <div className="mt-1.5 md:mt-2 flex items-center gap-4 md:gap-5 text-[12px] md:text-sm text-slate-500 dark:text-slate-400">
               <button
                 type="button"
                 onClick={() => onCommentLike(comment.id)}
@@ -725,7 +715,7 @@ function CommentCard({
                 onClick={() => onToggleReplies(comment.id)}
                 className="text-[11px] md:text-xs text-slate-400 hover:text-indigo-500 transition-colors py-1 cursor-pointer"
               >
-                {isExpanded ? "收起回复" : `展开其余 ${restCount} 条回复`}
+                {isExpanded ? "收起回复" : `展开 ${restCount} 条回复`}
               </button>
             )}
           </div>
@@ -848,10 +838,10 @@ function ReplyCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs md:text-[13px] font-medium text-slate-500 dark:text-slate-400 truncate">
+              <span className="text-[13px] md:text-[15px] font-medium text-slate-700 dark:text-slate-200 truncate">
                 {nameText}
               </span>
-              <span className="text-[10px] text-slate-300 dark:text-slate-600 shrink-0">
+              <span className="text-[13px] md:text-[15px] text-slate-400 dark:text-slate-500 shrink-0">
                 {relativeTime(reply.created_at)}
               </span>
             </div>
@@ -863,7 +853,7 @@ function ReplyCard({
               )}
               {reply.content}
             </p>
-            <div className="mt-1 flex items-center gap-4 md:gap-5 text-[11px] md:text-xs text-slate-400">
+            <div className="mt-1 flex items-center gap-4 md:gap-5 text-[12px] md:text-sm text-slate-500 dark:text-slate-400">
               <button
                 type="button"
                 onClick={() => onCommentLike(reply.id)}
