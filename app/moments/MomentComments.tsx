@@ -18,11 +18,13 @@ export default function MomentComments({
   initialLikes,
   initialCommentCount,
   onCountChange,
+  preloadedComments,
 }: {
   chatterId: string;
   initialLikes?: number;
   initialCommentCount?: number;
   onCountChange?: (n: number) => void;
+  preloadedComments?: ChatterCommentItem[];
 }) {
   return (
     <Comments<ChatterCommentItem>
@@ -34,6 +36,7 @@ export default function MomentComments({
       // 点开评论时输入框自动完全展开（表情 + 发表/取消直接可见）
       hideActions
       autoCompose
+      initialComments={preloadedComments}
       onCountChange={onCountChange}
       getComments={getChatterComments}
       createComment={(d) =>

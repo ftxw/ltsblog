@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { MapPin, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Clock, Heart, MessageCircle } from 'lucide-react';
 import CommentAuthProvider from "@/components/providers/CommentAuthProvider";
 import { useEntityLike } from "@/components/useEntityLike";
 import { relativeTime, formatDateCN } from "@/app/lib/format";
-import MomentComments from './MomentComments';
+import MomentComments, { type ChatterCommentItem } from './MomentComments';
+import { getChatterComments } from '@/app/api';
 import PageHeader from "@/components/ui/PageHeader";
 import InlineSearch from "@/components/ui/InlineSearch";
 import SegmentedFilter from "@/components/ui/SegmentedFilter";
@@ -59,8 +60,8 @@ function MomentActions({
         }`}
         aria-label="评论"
       >
-        <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
-        <span className="tabular-nums">{commentCount}</span>
+        <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
+        <span className="tabular-nums">{commentCount > 0 ? commentCount : "评论"}</span>
       </button>
 
       {/* ♡ 点赞 */}
@@ -76,11 +77,11 @@ function MomentActions({
         aria-label="点赞"
       >
         <Heart
-          className={`w-5 h-5 md:w-6 md:h-6 transition-all ${
+          className={`w-4 h-4 md:w-5 md:h-5 transition-all ${
             liked ? "fill-pink-500 scale-110" : ""
           }`}
         />
-        <span className="tabular-nums">{likes}</span>
+        <span className="tabular-nums">{likes > 0 ? likes : "点赞"}</span>
       </button>
     </div>
   );
@@ -96,6 +97,22 @@ export default function MomentListClient({ initialMoments }: { initialMoments: M
   const [openCommentId, setOpenCommentId] = useState<string | null>(null);
   // 评论数：发表后由评论区回传更新，默认用列表自带的 comments_count
   const [commentCountMap, setCommentCountMap] = useState<Record<string, number>>({});
+  // 说说卡片进入视口后预拉取的评论缓存（让"评论跟随说说"：展开秒开）
+  const [commentCache, setCommentCache] = useState<Record<string, ChatterCommentItem[]>>({});
+  const prefetchedSet = useRef<Set<string>>(new Set());
+  const prefetchComments = (momentId: string) => {
+    if (prefetchedSet.current.has(momentId)) return;
+    prefetchedSet.current.add(momentId);
+    getChatterComments(momentId)
+      .then((data) => {
+        if (!Array.isArray(data)) return;
+        setCommentCache((m) => ({ ...m, [momentId]: data as ChatterCommentItem[] }));
+      })
+      .catch(() => {
+        // 预加载失败忽略，展开时会再次尝试
+        prefetchedSet.current.delete(momentId);
+      });
+  };
 
   const processedMoments = useMemo(() => {
     let result = [...moments];
@@ -176,6 +193,7 @@ export default function MomentListClient({ initialMoments }: { initialMoments: M
       initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.1 }}
+      onViewportEnter={() => prefetchComments(moment.id)}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.5, delay: index * 0.08, ease: "easeOut" }}
       className="flex flex-col bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-3xl md:rounded-[40px] shadow-lg md:shadow-xl border border-white/40 dark:border-white/10 p-5 md:p-10 transition-shadow hover:shadow-2xl overflow-hidden relative group w-full"
@@ -212,14 +230,15 @@ export default function MomentListClient({ initialMoments }: { initialMoments: M
       {/* 点 💬 展开：评论输入框 + 评论列表（不做高度动画，避免展开卡顿） */}
       {openCommentId === moment.id && (
         <div className="pt-4 md:pt-5">
-          <MomentComments
-            chatterId={moment.id}
-            initialLikes={moment.likes}
-            initialCommentCount={commentCountMap[moment.id] ?? moment.comments_count}
-            onCountChange={(n) =>
-              setCommentCountMap((m) => ({ ...m, [moment.id]: n }))
-            }
-          />
+              <MomentComments
+                chatterId={moment.id}
+                initialLikes={moment.likes}
+                initialCommentCount={commentCountMap[moment.id] ?? moment.comments_count}
+                preloadedComments={commentCache[moment.id]}
+                onCountChange={(n) =>
+                  setCommentCountMap((m) => ({ ...m, [moment.id]: n }))
+                }
+              />
         </div>
       )}
     </motion.div>

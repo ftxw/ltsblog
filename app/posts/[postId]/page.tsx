@@ -19,6 +19,7 @@ import PostContent from "@/components/posts/PostContent";
 import PostContentWithHighlight from "@/components/posts/PostContentWithHighlight";
 import ViewCounter from "@/components/posts/ViewCounter";
 import PostComments from "@/components/posts/PostCommentsLazy";
+import PostCover from "@/components/posts/PostCover";
 import { thumbUrlOf } from "@/app/lib/image-thumb";
 
 /** 页面级 ISR：300s 增量静态生成；发布/编辑/删除文章时由 API 层 revalidatePath 即时失效 */
@@ -87,14 +88,10 @@ export default async function PostPage({
       <FadeIn className="container-page flex flex-col lg:flex-row gap-6 md:gap-8 relative z-10">
         <article className="flex-1 bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/40 dark:border-white/10 overflow-hidden transition-colors duration-700">
           <div className="w-full aspect-video bg-slate-200 dark:bg-slate-700 relative group overflow-hidden">
-            {/* 列表/详情都先加载缩略图（更快），点击封面可后续扩展为 lightbox 看原图 */}
-            <SafeImage
-              src={thumbUrlOf(post.cover || siteConfig.defaultPostCover)}
-              fallbackSrc={post.cover || siteConfig.defaultPostCover}
+            <PostCover
+              src={post.cover || siteConfig.defaultPostCover}
               alt="封面"
-              fill
               sizes="(max-width: 768px) 100vw, 70vw"
-              unoptimized={imageUnoptimized(post.cover || siteConfig.defaultPostCover)}
               className="object-cover opacity-90 transition-transform duration-1000 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none transition-transform duration-1000 group-hover:scale-105"></div>

@@ -64,6 +64,11 @@ export interface CommentsProps<T extends CommentItem> {
   /** 挂载后自动展开输入框（说说：点 💬 后直接展开输入区 + 表情/发表/取消） */
   autoCompose?: boolean;
   /**
+   * 预加载的评论数据（说说卡片滚动到视口时随说说一起拉取，展开评论秒开），
+   * 传入后跳过首次网络请求。
+   */
+  initialComments?: T[];
+  /**
    * 输入框的外部挂载容器（项目详情用）：传入后，输入区会通过 portal
    * 渲染到该节点（例如弹窗底部固定栏），而评论列表仍留在原滚动流中。
    */
@@ -104,6 +109,7 @@ export default function Comments<T extends CommentItem>({
   hideActions = false,
   autoCompose = false,
   inputHostRef,
+  initialComments,
   onCountChange,
 }: CommentsProps<T>) {
   const { user, openLogin } = useCommentAuth();
@@ -127,8 +133,10 @@ export default function Comments<T extends CommentItem>({
   const [commentInput, setCommentInput] = useState("");
   const [replyTo, setReplyTo] = useState<CommentItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [comments, setComments] = useState<CommentItem[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(true);
+  const [comments, setComments] = useState<CommentItem[]>(
+    () => (initialComments ? (initialComments as CommentItem[]) : [])
+  );
+  const [commentsLoading, setCommentsLoading] = useState(!Boolean(initialComments));
   const listRef = useRef<HTMLDivElement>(null);
   const [composing, setComposing] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -138,7 +146,11 @@ export default function Comments<T extends CommentItem>({
     const saved = localStorage.getItem(likedKey);
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
-  const [totalCount, setTotalCount] = useState<number | null>(initialCommentCount ?? null);
+  const [totalCount, setTotalCount] = useState<number | null>(() =>
+    initialComments
+      ? countAll(initialComments as CommentItem[])
+      : initialCommentCount ?? null
+  );
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [loadError, setLoadError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
@@ -161,8 +173,14 @@ export default function Comments<T extends CommentItem>({
     setInputHost(inputHostRef.current ?? null);
   }, [inputHostRef]);
 
-  // 加载评论（列表与总数）
+  // 加载评论（列表与总数）；若已传入 initialComments 则跳过首次拉取
   useEffect(() => {
+    if (initialComments) {
+      setCommentsLoading(false);
+      // 同步外部（首次挂载时通知总条数）
+      onCountChangeRef.current?.(countAll(initialComments as CommentItem[]));
+      return;
+    }
     let active = true;
     setCommentsLoading(true);
     getComments(targetId)
@@ -334,7 +352,7 @@ export default function Comments<T extends CommentItem>({
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
       <div className="flex items-center">
         <div
-          className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border pl-1.5 pr-2.5 md:pl-2 md:pr-3 py-0.5 md:py-1 transition-colors ${
+          className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border pl-0.5 pr-2 md:pl-1 md:pr-2.5 py-0.5 md:py-1 transition-colors ${
             composing && loggedIn
               ? "border-indigo-300 dark:border-indigo-500/50"
               : "border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
@@ -397,7 +415,7 @@ export default function Comments<T extends CommentItem>({
               }`}
               aria-label="评论"
             >
-              <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
+              <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
               <span className="tabular-nums">
                 {(totalCount ?? 0) > 0 ? totalCount : "评论"}
               </span>
@@ -418,7 +436,7 @@ export default function Comments<T extends CommentItem>({
               aria-label="点赞"
             >
               <Heart
-                className={`w-5 h-5 md:w-6 md:h-6 transition-all ${
+                className={`w-4 h-4 md:w-5 md:h-5 transition-all ${
                   entityLiked ? "fill-pink-500 scale-110" : ""
                 }`}
               />
@@ -483,7 +501,7 @@ export default function Comments<T extends CommentItem>({
                   }`}
                   title="插入表情"
                 >
-                  <Smile className="w-5 h-5 md:w-6 md:h-6" />
+                  <Smile className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
 
 
@@ -690,27 +708,25 @@ function CommentCard({
               likedCommentIds={likedCommentIds}
               onCommentLike={onCommentLike}
             />
+            {isExpanded &&
+              flatReplies.slice(1).map((reply) => (
+                <ReplyCard
+                  key={reply.id}
+                  reply={reply}
+                  flat
+                  onReply={onReply}
+                  likedCommentIds={likedCommentIds}
+                  onCommentLike={onCommentLike}
+                />
+              ))}
             {restCount > 0 && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onToggleReplies(comment.id)}
-                  className="text-[11px] md:text-xs text-slate-400 hover:text-indigo-500 transition-colors py-1 cursor-pointer"
-                >
-                  {isExpanded ? "收起回复" : `展开其余 ${restCount} 条回复`}
-                </button>
-                {isExpanded &&
-                  flatReplies.slice(1).map((reply) => (
-                    <ReplyCard
-                      key={reply.id}
-                      reply={reply}
-                      flat
-                      onReply={onReply}
-                      likedCommentIds={likedCommentIds}
-                      onCommentLike={onCommentLike}
-                    />
-                  ))}
-              </>
+              <button
+                type="button"
+                onClick={() => onToggleReplies(comment.id)}
+                className="text-[11px] md:text-xs text-slate-400 hover:text-indigo-500 transition-colors py-1 cursor-pointer"
+              >
+                {isExpanded ? "收起回复" : `展开其余 ${restCount} 条回复`}
+              </button>
             )}
           </div>
         )}
@@ -869,7 +885,7 @@ function ReplyCard({
                 onClick={() => onReply(reply)}
                 className="flex items-center gap-1 hover:text-sky-500 transition-colors cursor-pointer"
               >
-                <Reply className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <MessageCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 <span>回复</span>
               </button>
             </div>

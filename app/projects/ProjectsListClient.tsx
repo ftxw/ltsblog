@@ -268,25 +268,8 @@ function ProjectDetailModal({
             )}
           </div>
 
-          {/* 右侧：项目信息 + 评论 */}
+          {/* 右侧：项目信息 + 评论（去掉原头部，右侧内容整体上移；关闭按钮移到弹窗外的 onClose 由 ESC / 背景点击触发） */}
           <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900">
-            <div className="flex items-center justify-between px-5 md:px-7 pt-5 md:pt-6 pb-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                {project.status_label && (
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
-                    {project.status_label}
-                  </span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
             <div className="flex-1 min-h-0 flex flex-col">
               {/* 顶部信息滚动区 */}
               <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-7 pt-5 pb-3 space-y-5">
