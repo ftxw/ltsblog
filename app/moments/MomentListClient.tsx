@@ -6,8 +6,8 @@ import { MapPin, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Clock
 import CommentAuthProvider from "@/components/providers/CommentAuthProvider";
 import { useEntityLike } from "@/components/useEntityLike";
 import { relativeTime, formatDateCN } from "@/app/lib/format";
-import MomentComments, { type ChatterCommentItem } from './MomentComments';
-import { getChatterComments } from '@/app/api';
+import MomentComments from './MomentComments';
+import { getChatterComments, type ChatterCommentItem } from '@/app/api';
 import PageHeader from "@/components/ui/PageHeader";
 import InlineSearch from "@/components/ui/InlineSearch";
 import SegmentedFilter from "@/components/ui/SegmentedFilter";
