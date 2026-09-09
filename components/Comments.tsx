@@ -140,6 +140,9 @@ export default function Comments<T extends CommentItem>({
   const listRef = useRef<HTMLDivElement>(null);
   const [composing, setComposing] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  // 浮动表情面板：按钮屏幕坐标 + 按钮 ref
+  const [emojiPos, setEmojiPos] = useState<{ left: number; top: number } | null>(null);
+  const emojiBtnRef = useRef<HTMLButtonElement>(null);
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
   const [likedCommentIds, setLikedCommentIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
@@ -343,6 +346,23 @@ export default function Comments<T extends CommentItem>({
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
+  /** 打开/关闭浮动表情面板（记录按钮屏幕坐标，fixed 定位 + portal 到 body） */
+  function toggleEmoji() {
+    if (showEmoji) {
+      setShowEmoji(false);
+      return;
+    }
+    const btn = emojiBtnRef.current;
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      setEmojiPos({
+        left: Math.max(8, Math.min(r.left, window.innerWidth - 316)),
+        top: Math.max(8, r.top - 240), // 面板高约 200，默认浮在按钮上方
+      });
+    }
+    setShowEmoji(true);
+  }
+
   const loggedIn = Boolean(user);
 
   // 项目详情：输入框通过 portal 渲染到弹窗底部固定栏，列表留在滚动流中
@@ -358,12 +378,10 @@ export default function Comments<T extends CommentItem>({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pt-1 pb-1.5 pl-9 md:pl-11">
+            <div className="pt-1 pb-1.5 pl-1 md:pl-1.5">
+              {/* 第一行：回复 XXX（昵称与"回复"同色，输入框展开后无头像，文字靠左） */}
               <div className="text-[14px] font-medium text-slate-700 dark:text-slate-200">
-                回复{" "}
-                <span className="text-sky-600 dark:text-sky-400 font-semibold">
-                  {replyTo.email_user_name || "匿名"}
-                </span>
+                回复 {replyTo.email_user_name || "匿名"}
               </div>
               <div className="mt-0.5 text-[14px] text-slate-500 dark:text-slate-400 truncate">
                 {replyTo.content}
@@ -382,25 +400,27 @@ export default function Comments<T extends CommentItem>({
               : "border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
           }`}
         >
-          {/* 头像：输入框内部左侧，使用昵称首字 */}
-          <button
-            type="button"
-            onClick={() => (loggedIn ? setComposing((v) => !v) : openLogin())}
-            className="shrink-0 rounded-full overflow-hidden"
-            aria-label="头像"
-          >
-            <div
-              className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold ${
-                loggedIn
-                  ? "bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 text-white text-xs md:text-sm"
-                  : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-300"
-              }`}
+          {/* 头像：仅在未展开输入时显示（输入框内部左侧，使用昵称首字） */}
+          {!(composing && loggedIn) && (
+            <button
+              type="button"
+              onClick={() => (loggedIn ? setComposing((v) => !v) : openLogin())}
+              className="shrink-0 rounded-full overflow-hidden"
+              aria-label="头像"
             >
-              {loggedIn
-                ? (user!.nickname || user!.email || "?").slice(0, 1).toUpperCase()
-                : <UserRound className="w-4 h-4" />}
-            </div>
-          </button>
+              <div
+                className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold ${
+                  loggedIn
+                    ? "bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 text-white text-xs md:text-sm"
+                    : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-300"
+                }`}
+              >
+                {loggedIn
+                  ? (user!.nickname || user!.email || "?").slice(0, 1).toUpperCase()
+                  : <UserRound className="w-4 h-4" />}
+              </div>
+            </button>
+          )}
 
           {composing && loggedIn ? (
             <textarea
@@ -486,7 +506,8 @@ export default function Comments<T extends CommentItem>({
               <div className="flex items-center gap-1 md:gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowEmoji((v) => !v)}
+                  ref={emojiBtnRef}
+                  onClick={toggleEmoji}
                   className={`p-1.5 rounded-full transition-colors cursor-pointer ${
                     showEmoji
                       ? "bg-indigo-50 dark:bg-slate-800 text-slate-500 dark:text-slate-300"
@@ -496,7 +517,6 @@ export default function Comments<T extends CommentItem>({
                 >
                   <Smile className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
-
 
               </div>
 
@@ -520,32 +540,38 @@ export default function Comments<T extends CommentItem>({
               </div>
             </div>
 
-            <AnimatePresence>
-              {showEmoji && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="mt-2 p-2 grid grid-cols-10 gap-0.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 max-h-28 overflow-y-auto">
-                    {EMOJIS.map((e) => (
-                      <button
-                        key={e}
-                        type="button"
-                        onClick={() => insertEmoji(e)}
-                        className="text-base md:text-lg p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded cursor-pointer"
-                      >
-                        {e}
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 浮动表情面板：portal 到 body，fixed 定位在表情按钮上方 */}
+      {showEmoji &&
+        typeof document !== "undefined" &&
+        emojiPos &&
+        createPortal(
+          <div className="fixed inset-0 z-[300]" onClick={() => setShowEmoji(false)}>
+            <div
+              className="absolute w-[300px] max-w-[85vw]"
+              style={{ left: emojiPos.left, top: emojiPos.top }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-2 grid grid-cols-10 gap-0.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl max-h-44 overflow-y-auto">
+                {EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => insertEmoji(e)}
+                    className="text-base md:text-lg p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded cursor-pointer"
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 
