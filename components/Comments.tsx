@@ -382,7 +382,9 @@ export default function Comments<T extends CommentItem>({
             <button
               type="button"
               onClick={handleCommentButton}
-              className="flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-sm md:text-base font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 transition-colors cursor-pointer"
+              className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-sm md:text-base font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 transition-colors cursor-pointer ${
+                kind === "project" ? "order-3" : ""
+              }`}
               aria-label="评论"
             >
               <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
@@ -395,6 +397,8 @@ export default function Comments<T extends CommentItem>({
               onClick={toggleEntityLike}
               disabled={likeBusy}
               className={`flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-sm md:text-base font-semibold transition-all cursor-pointer ${
+                kind === "project" ? "order-2" : ""
+              } ${
                 entityLiked
                   ? "text-pink-500"
                   : "text-slate-400 dark:text-slate-500 hover:text-pink-500"
@@ -525,6 +529,11 @@ export default function Comments<T extends CommentItem>({
 
       {/* ===== 评论列表：项目场景在输入区上方、区域内滚动；其余场景正常展示 ===== */}
       <div ref={listRef} className={kind === "project" ? "order-1 min-h-0 overflow-y-auto mt-0" : "mt-3"}>
+            {kind === "project" && (
+              <div className="pb-1 text-xs md:text-[13px] text-slate-400">
+                共 {totalCount ?? 0} 条评论
+              </div>
+            )}
             {showErrorRetry && loadError && (
               <div className="text-center py-8 md:py-12 text-slate-400">
                 <MessageCircle className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 md:mb-3 opacity-40" />
@@ -557,11 +566,12 @@ export default function Comments<T extends CommentItem>({
             )}
 
             {!commentsLoading && comments.length > 0 && (
-              <div className="space-y-3 md:space-y-4">
+              <div className={kind === "project" ? "" : "space-y-3 md:space-y-4"}>
                 {comments.map((comment) => (
                   <CommentCard
                     key={comment.id}
                     comment={comment}
+                    flat={kind === "project"}
                     expandedReplies={expandedReplies}
                     onReply={startReply}
                     onToggleReplies={(id) =>
@@ -590,6 +600,7 @@ function CommentCard({
   onToggleReplies,
   likedCommentIds,
   onCommentLike,
+  flat = false,
 }: {
   comment: CommentItem;
   expandedReplies: Set<string>;
@@ -597,11 +608,90 @@ function CommentCard({
   onToggleReplies: (id: string) => void;
   likedCommentIds: Set<string>;
   onCommentLike: (id: string) => void;
+  flat?: boolean;
 }) {
   const isExpanded = expandedReplies.has(comment.id);
-  const flat = flattenReplies(comment.replies ?? []);
-  const replyCount = flat.length;
+  const flatReplies = flattenReplies(comment.replies ?? []);
+  const replyCount = flatReplies.length;
 
+  const nameText = comment.email_user_name || "匿名用户";
+
+  /* ---- 扁平样式（项目详情：截图同款） ---- */
+  if (flat) {
+    return (
+      <div className="py-3 md:py-4">
+        <div className="flex items-start gap-2.5 md:gap-3">
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-xs md:text-sm font-bold shrink-0">
+            {(comment.email_user_name || "匿").slice(0, 1).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs md:text-[13px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                {nameText}
+              </span>
+              <span className="text-[10px] md:text-xs text-slate-300 dark:text-slate-600 shrink-0">
+                {relativeTime(comment.created_at)}
+              </span>
+            </div>
+            <p className="mt-1 text-[13px] md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words">
+              {comment.content}
+            </p>
+            <div className="mt-1.5 md:mt-2 flex items-center gap-4 md:gap-5 text-[11px] md:text-xs text-slate-400">
+              <button
+                type="button"
+                onClick={() => onCommentLike(comment.id)}
+                className={`flex items-center gap-1 transition-colors cursor-pointer ${
+                  likedCommentIds.has(comment.id)
+                    ? "text-pink-500"
+                    : "hover:text-pink-500"
+                }`}
+              >
+                <Heart
+                  className={`w-3.5 h-3.5 md:w-4 md:h-4 transition-all ${
+                    likedCommentIds.has(comment.id) ? "fill-pink-500" : ""
+                  }`}
+                />
+                <span>{comment.likes}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onReply(comment)}
+                className="flex items-center gap-1 hover:text-sky-500 transition-colors cursor-pointer"
+              >
+                <MessageCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span>回复</span>
+              </button>
+              {replyCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onToggleReplies(comment.id)}
+                  className="ml-auto hover:text-indigo-500 transition-colors cursor-pointer"
+                >
+                  {isExpanded ? "收起回复" : `${replyCount} 条回复`}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        {isExpanded && replyCount > 0 && (
+          <div className="mt-1 pl-10 md:pl-[52px]">
+            {flatReplies.map((reply) => (
+              <ReplyCard
+                key={reply.id}
+                reply={reply}
+                flat
+                onReply={onReply}
+                likedCommentIds={likedCommentIds}
+                onCommentLike={onCommentLike}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ---- 卡片样式（文章 / 说说） ---- */
   return (
     <div className="rounded-2xl bg-white/50 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
       <div className="p-3 md:p-5">
@@ -612,7 +702,7 @@ function CommentCard({
           </div>
           <div className="flex-1 min-w-0">
             <span className="text-xs md:text-sm font-semibold text-slate-800 dark:text-slate-200">
-              {comment.email_user_name || "匿名用户"}
+              {nameText}
             </span>
           </div>
           <span className="text-[10px] md:text-xs text-slate-400 dark:text-slate-500 shrink-0">
@@ -673,7 +763,7 @@ function CommentCard({
             className="overflow-hidden"
           >
             <div className="border-t border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30">
-              {flat.map((reply) => (
+              {flatReplies.map((reply) => (
                 <ReplyCard
                   key={reply.id}
                   reply={reply}
@@ -695,12 +785,73 @@ function ReplyCard({
   onReply,
   likedCommentIds,
   onCommentLike,
+  flat = false,
 }: {
   reply: CommentItem & { replyToUser?: string };
   onReply: (c: CommentItem) => void;
   likedCommentIds: Set<string>;
   onCommentLike: (id: string) => void;
+  flat?: boolean;
 }) {
+  const nameText = reply.email_user_name || "匿名用户";
+
+  /* ---- 扁平样式（项目详情：截图同款） ---- */
+  if (flat) {
+    return (
+      <div className="py-2">
+        <div className="flex items-start gap-2">
+          <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-[10px] md:text-xs font-bold mt-0.5 shrink-0">
+            {(reply.email_user_name || "匿").slice(0, 1).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs md:text-[13px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                {nameText}
+              </span>
+              <span className="text-[10px] text-slate-300 dark:text-slate-600 shrink-0">
+                {relativeTime(reply.created_at)}
+              </span>
+            </div>
+            <p className="mt-0.5 text-[13px] md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words">
+              {reply.replyToUser && (
+                <span className="text-sky-500 dark:text-sky-400 mr-1">
+                  回复 @{reply.replyToUser}：
+                </span>
+              )}
+              {reply.content}
+            </p>
+            <div className="mt-1 flex items-center gap-4 md:gap-5 text-[11px] md:text-xs text-slate-400">
+              <button
+                type="button"
+                onClick={() => onCommentLike(reply.id)}
+                className={`flex items-center gap-1 transition-colors cursor-pointer ${
+                  likedCommentIds.has(reply.id)
+                    ? "text-pink-500"
+                    : "hover:text-pink-500"
+                }`}
+              >
+                <Heart
+                  className={`w-3.5 h-3.5 md:w-4 md:h-4 transition-all ${
+                    likedCommentIds.has(reply.id) ? "fill-pink-500" : ""
+                  }`}
+                />
+                <span>{reply.likes}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onReply(reply)}
+                className="flex items-center gap-1 hover:text-sky-500 transition-colors cursor-pointer"
+              >
+                <Reply className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span>回复</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-3 py-2 md:px-5 md:py-3 border-b border-slate-200/30 dark:border-white/5 last:border-0">
       <div className="flex items-start gap-2 md:gap-3">
@@ -711,7 +862,7 @@ function ReplyCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
             <span className="text-[10px] md:text-xs font-semibold text-slate-700 dark:text-slate-300">
-              {reply.email_user_name || "匿名用户"}
+              {nameText}
             </span>
             <span className="text-[10px] md:text-xs text-slate-400">
               {relativeTime(reply.created_at)}
