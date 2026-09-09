@@ -411,7 +411,7 @@ export default function Comments<T extends CommentItem>({
         <div
           className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border transition-colors ${
             composing && loggedIn
-              ? "px-3 md:px-3.5 py-0.5 md:py-1 border-indigo-300 dark:border-indigo-500/50"
+              ? "px-4 py-0.5 md:py-1 border-indigo-300 dark:border-indigo-500/50"
               : "pl-0.5 pr-2 md:pl-1 md:pr-2.5 py-0.5 md:py-1 border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
           }`}
         >
@@ -449,7 +449,7 @@ export default function Comments<T extends CommentItem>({
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
                   handleSubmitComment();
               }}
-              className="flex-1 min-w-0 h-7 md:h-8 py-0 bg-transparent text-xs md:text-sm leading-[28px] md:leading-[32px] text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none"
+              className="flex-1 min-w-0 h-7 md:h-8 pt-[6px] md:pt-[8px] pb-0 bg-transparent text-xs md:text-sm leading-4 text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none overflow-hidden outline-none"
             />
           ) : (
             <button
