@@ -272,7 +272,7 @@ export default function MusicClient() {
             <div className="flex items-center justify-center gap-1 p-1 mt-4 md:mt-6 mx-auto bg-white/50 dark:bg-slate-900/50 rounded-full shadow-inner border border-white/40 w-48 md:w-64 z-20 shrink-0">
               <button
                 onClick={() => setActiveTab("lyrics")}
-                className={`flex-1 py-1.5 md:py-2 rounded-full font-black text-xs md:text-[13px] transition-all ${
+                className={`flex-1 py-1.5 md:py-2 rounded-full font-black text-[14px] transition-all ${
                   activeTab === "lyrics"
                     ? "bg-indigo-500 text-white shadow-md"
                     : "text-slate-500"
@@ -282,7 +282,7 @@ export default function MusicClient() {
               </button>
               <button
                 onClick={() => setActiveTab("playlist")}
-                className={`flex-1 py-1.5 md:py-2 rounded-full font-black text-xs md:text-[13px] transition-all ${
+                className={`flex-1 py-1.5 md:py-2 rounded-full font-black text-[14px] transition-all ${
                   activeTab === "playlist"
                     ? "bg-indigo-500 text-white shadow-md"
                     : "text-slate-500"

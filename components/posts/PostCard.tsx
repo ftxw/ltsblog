@@ -71,7 +71,7 @@ export default function PostCard({ post }: PostCardProps) {
           {/* 文本信息 */}
           <div className="p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-indigo-600 dark:text-indigo-400 font-bold text-[11px] flex items-center gap-1 uppercase tracking-wider">
+              <div className="text-indigo-600 dark:text-indigo-400 font-bold text-[12px] flex items-center gap-1 uppercase tracking-wider">
                 <Clock className="w-3.5 h-3.5" strokeWidth={2.5} />
                 {dateStr}
               </div>
