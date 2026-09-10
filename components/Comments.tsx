@@ -390,7 +390,7 @@ export default function Comments<T extends CommentItem>({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pt-1 pb-1.5 pl-3 md:pl-4">
+            <div className="pt-1 pb-1.5 pl-[41px] md:pl-[45px]">
               {/* 第一行：回复 XXX（昵称与"回复"同色，输入框展开后无头像，文字靠左） */}
               <div className="text-[14px] font-medium text-slate-700 dark:text-slate-200">
                 回复 {replyTo.email_user_name || "匿名"}
@@ -406,33 +406,31 @@ export default function Comments<T extends CommentItem>({
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
       <div className="flex items-center">
         <div
-          className={`flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border transition-colors ${
+          className={`flex-1 min-w-0 flex items-center gap-2 rounded-[21px] bg-slate-100/80 dark:bg-slate-800/70 border min-h-[42px] pl-[5px] pr-3 py-0 transition-colors ${
             composing && loggedIn
-              ? "px-4 py-0.5 md:py-1 border-indigo-300 dark:border-indigo-500/50"
-              : "pl-0.5 pr-2 md:pl-1 md:pr-2.5 py-0.5 md:py-1 border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
+              ? "border-indigo-300 dark:border-indigo-500/50"
+              : "border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
           }`}
         >
-          {/* 头像：仅在未展开输入时显示（输入框内部左侧，使用昵称首字） */}
-          {!(composing && loggedIn) && (
-            <button
-              type="button"
-              onClick={() => (loggedIn ? setComposing((v) => !v) : openLogin())}
-              className="shrink-0 rounded-full overflow-hidden"
-              aria-label="头像"
+          {/* 头像：距输入框左边 5px */}
+          <button
+            type="button"
+            onClick={() => (loggedIn ? setComposing((v) => !v) : openLogin())}
+            className="shrink-0 rounded-full overflow-hidden"
+            aria-label="头像"
+          >
+            <div
+              className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold ${
+                loggedIn
+                  ? "bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 text-white text-xs md:text-sm"
+                  : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-300"
+              }`}
             >
-              <div
-                className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold ${
-                  loggedIn
-                    ? "bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 text-white text-xs md:text-sm"
-                    : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-300"
-                }`}
-              >
-                {loggedIn
-                  ? (user!.nickname || user!.email || "?").slice(0, 1).toUpperCase()
-                  : <UserRound className="w-4 h-4" />}
-              </div>
-            </button>
-          )}
+              {loggedIn
+                ? (user!.nickname || user!.email || "?").slice(0, 1).toUpperCase()
+                : <UserRound className="w-4 h-4" />}
+            </div>
+          </button>
 
           {composing && loggedIn ? (
             <textarea
@@ -446,7 +444,7 @@ export default function Comments<T extends CommentItem>({
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
                   handleSubmitComment();
               }}
-              className="flex-1 min-w-0 min-h-7 md:min-h-8 max-h-40 bg-transparent text-[13px] md:text-sm leading-relaxed text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none overflow-y-auto"
+              className="flex-1 min-w-0 max-h-40 bg-transparent text-[13px] md:text-sm leading-relaxed text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none overflow-y-auto"
             />
           ) : (
             <button
