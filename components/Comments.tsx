@@ -176,6 +176,14 @@ export default function Comments<T extends CommentItem>({
     setInputHost(inputHostRef.current ?? null);
   }, [inputHostRef]);
 
+  // 自动增高：多行内容时输入框随内容变高（超过 max-h 后内部滚动）
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [commentInput, composing, replyTo]);
+
   // 加载评论（列表与总数）；若已传入 initialComments 则跳过首次拉取
   useEffect(() => {
     if (initialComments) {
@@ -438,7 +446,7 @@ export default function Comments<T extends CommentItem>({
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
                   handleSubmitComment();
               }}
-              className="flex-1 min-w-0 h-7 md:h-8 pt-[6px] md:pt-[8px] pb-0 bg-transparent text-xs md:text-sm leading-4 text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none overflow-hidden outline-none"
+              className="flex-1 min-w-0 min-h-7 md:min-h-8 max-h-40 bg-transparent text-[13px] md:text-sm leading-relaxed text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none overflow-y-auto"
             />
           ) : (
             <button
