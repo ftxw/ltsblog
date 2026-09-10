@@ -198,7 +198,7 @@ export default function MomentListClient({ initialMoments }: { initialMoments: M
       transition={{ duration: 0.5, delay: index * 0.08, ease: "easeOut" }}
       className="flex flex-col bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-3xl md:rounded-[40px] shadow-lg md:shadow-xl border border-white/40 dark:border-white/10 p-5 md:p-10 transition-shadow hover:shadow-2xl overflow-hidden relative group w-full"
     >
-      <p className="text-slate-800 dark:text-slate-200 text-base md:text-lg leading-relaxed whitespace-pre-wrap font-medium break-words">{moment.content}</p>
+      <p className="text-slate-800 dark:text-slate-200 text-base leading-relaxed whitespace-pre-wrap font-medium break-words">{moment.content}</p>
 
       {renderImages(moment.images)}
 

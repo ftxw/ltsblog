@@ -327,8 +327,8 @@ export default function MusicClient() {
                               <p
                                 className={`font-black tracking-tight leading-relaxed transition-all duration-700 ${
                                   isActive
-                                    ? "text-lg md:text-2xl text-indigo-600 dark:text-indigo-400"
-                                    : "text-sm md:text-lg text-slate-700 dark:text-slate-300"
+                                    ? "text-[20px] text-indigo-600 dark:text-indigo-400"
+                                    : "text-[16px] text-slate-700 dark:text-slate-300"
                                 }`}
                                 style={
                                   isActive

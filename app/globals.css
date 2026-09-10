@@ -24,6 +24,7 @@ input, textarea, [contenteditable], .prose, code, pre {
 
 /* 页面主容器：所有前台页面的统一宽度与内边距（max-w-6xl + 响应式内边距） */
 .container-page {
+  width: 100%;
   max-width: 72rem;
   margin-left: auto;
   margin-right: auto;

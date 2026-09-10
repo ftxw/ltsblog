@@ -155,8 +155,8 @@ export default async function PostPage({
             <div className="space-y-4">
               {recentPosts.map((p) => (
                 <Link key={p.id} href={`/posts/${p.id}`} className="group block">
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">{p.title}</h4>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-bold uppercase">
+                  <h4 className="text-[16px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">{p.title}</h4>
+                  <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-1 font-bold uppercase">
                     {p.published_at ? new Date(p.published_at).toISOString().slice(0, 10) : ""}
                   </p>
                 </Link>

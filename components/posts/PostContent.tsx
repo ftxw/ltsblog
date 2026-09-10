@@ -252,7 +252,7 @@ export default function PostContent({ contentHtml, highlightKeyword }: PostConte
         <div
           id="article-content"
           ref={contentRef}
-          className="prose prose-slate dark:prose-invert prose-base md:prose-lg max-w-none text-slate-800 dark:text-slate-200 transition-colors duration-700"
+          className="prose prose-slate dark:prose-invert prose-base max-w-none text-slate-800 dark:text-slate-200 transition-colors duration-700"
           onClick={handleContentClick}
           dangerouslySetInnerHTML={{ __html: contentHtml }}
         />

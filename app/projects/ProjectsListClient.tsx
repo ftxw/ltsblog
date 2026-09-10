@@ -342,7 +342,7 @@ function ProjectDetailModal({
               )}
 
               {project.long_description && (
-                <div className="prose prose-slate dark:prose-invert prose-base md:prose-lg max-w-none text-slate-800 dark:text-slate-200 whitespace-pre-wrap transition-colors duration-700">
+                <div className="prose prose-slate dark:prose-invert prose-base max-w-none text-slate-800 dark:text-slate-200 whitespace-pre-wrap transition-colors duration-700">
                   {project.long_description}
                 </div>
               )}
@@ -363,7 +363,7 @@ function ProjectDetailModal({
 
               {/* 发表时间：相对时间，字号/颜色与评论区时间一致 */}
               <div className="text-[13px] md:text-[14px] text-slate-400 dark:text-slate-500">
-                发表于 {relativeTime(project.created_at)}
+                发表于 {formatDateCN(new Date(project.created_at))}
               </div>
 
               {/* 分割线：位于"发表于"下方，下方为评论列表 */}
