@@ -47,7 +47,7 @@ export default function SegmentedFilter({
               key={opt.value}
               type="button"
               onClick={() => onChange(opt.value)}
-              className={`flex items-center gap-1.5 md:gap-2 px-3 py-2 rounded-xl text-[14px] font-bold transition-all duration-300 ${
+              className={`flex items-center gap-1.5 md:gap-2 px-3 py-1.5 rounded-xl text-[14px] font-bold transition-all duration-300 ${
                 isActive
                   ? "bg-indigo-500 text-white shadow-md"
                   : "text-slate-600 dark:text-slate-400 hover:text-indigo-500"
