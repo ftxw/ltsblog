@@ -33,9 +33,8 @@ export default function MomentComments({
       initialLikes={initialLikes}
       initialCommentCount={initialCommentCount}
       // 说说的 💬/♡ 由卡片底部（原位置）承载，评论区不再重复渲染；
-      // 点开评论时输入框自动完全展开（表情 + 发表/取消直接可见）
+      // 点开评论后默认收起输入框，点输入框才展开
       hideActions
-      autoCompose
       initialComments={preloadedComments}
       onCountChange={onCountChange}
       getComments={getChatterComments}

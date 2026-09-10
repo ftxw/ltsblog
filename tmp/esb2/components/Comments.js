@@ -1,0 +1,794 @@
+"use strict";
+"use client";
+import { Fragment, jsx, jsxs } from "react/jsx-runtime";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Reply,
+  Heart,
+  MessageCircle,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Smile,
+  UserRound
+} from "lucide-react";
+import { relativeTime, flattenReplies } from "@/app/lib/format";
+import { useCommentAuth } from "@/components/providers/CommentAuthProvider";
+import { useEntityLike } from "@/components/useEntityLike";
+const KIND_TARGET = {
+  moment: "chatter",
+  post: "post",
+  project: "project"
+};
+const EMOJIS = [
+  "\u{1F600}",
+  "\u{1F604}",
+  "\u{1F60A}",
+  "\u{1F60D}",
+  "\u{1F618}",
+  "\u{1F60E}",
+  "\u{1F914}",
+  "\u{1F605}",
+  "\u{1F602}",
+  "\u{1F62D}",
+  "\u{1F621}",
+  "\u{1F973}",
+  "\u{1F607}",
+  "\u{1F643}",
+  "\u{1F634}",
+  "\u{1F917}",
+  "\u{1F44D}",
+  "\u{1F44E}",
+  "\u{1F44F}",
+  "\u{1F64F}",
+  "\u{1F4AA}",
+  "\u{1F525}",
+  "\u2764\uFE0F",
+  "\u{1F494}",
+  "\u2728",
+  "\u2B50",
+  "\u{1F389}",
+  "\u{1F339}",
+  "\u{1F338}",
+  "\u2615",
+  "\u{1F431}",
+  "\u{1F436}",
+  "\u{1F340}",
+  "\u270C\uFE0F",
+  "\u{1F91D}",
+  "\u{1F4AF}",
+  "\u2705",
+  "\u2753",
+  "\u2757",
+  "\u{1F382}"
+];
+function countAll(nodes) {
+  return nodes.reduce((s, c) => s + 1 + countAll(c.replies ?? []), 0);
+}
+export default function Comments({
+  targetId,
+  kind,
+  getComments,
+  createComment,
+  likeComment,
+  likedKey: likedKeyProp,
+  showErrorRetry = false,
+  likeTargetType: likeTargetTypeProp,
+  initialLikes,
+  initialCommentCount,
+  hideActions = false,
+  autoCompose = false,
+  inputHostRef,
+  initialComments,
+  onCountChange
+}) {
+  const { user, openLogin } = useCommentAuth();
+  const likedKey = likedKeyProp ?? `liked_${kind}_comments`;
+  const likeTargetType = likeTargetTypeProp ?? KIND_TARGET[kind];
+  const {
+    likes: entityLikes,
+    liked: entityLiked,
+    busy: likeBusy,
+    toggle: toggleEntityLike
+  } = useEntityLike(likeTargetType, targetId, initialLikes, !hideActions);
+  const onCountChangeRef = useRef(onCountChange);
+  useEffect(() => {
+    onCountChangeRef.current = onCountChange;
+  }, [onCountChange]);
+  const [commentInput, setCommentInput] = useState("");
+  const [replyTo, setReplyTo] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [comments, setComments] = useState(
+    () => initialComments ? initialComments : []
+  );
+  const [commentsLoading, setCommentsLoading] = useState(!Boolean(initialComments));
+  const listRef = useRef(null);
+  const [composing, setComposing] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [emojiPos, setEmojiPos] = useState(null);
+  const emojiBtnRef = useRef(null);
+  const [expandedReplies, setExpandedReplies] = useState(/* @__PURE__ */ new Set());
+  const [likedCommentIds, setLikedCommentIds] = useState(() => {
+    if (typeof window === "undefined") return /* @__PURE__ */ new Set();
+    const saved = localStorage.getItem(likedKey);
+    return saved ? new Set(JSON.parse(saved)) : /* @__PURE__ */ new Set();
+  });
+  const [totalCount, setTotalCount] = useState(
+    () => initialComments ? countAll(initialComments) : initialCommentCount ?? null
+  );
+  const inputRef = useRef(null);
+  const [loadError, setLoadError] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
+  const autoComposedRef = useRef(false);
+  useEffect(() => {
+    if (!autoCompose || autoComposedRef.current) return;
+    if (!user) return;
+    autoComposedRef.current = true;
+    setComposing(true);
+    setShowEmoji(false);
+    setTimeout(() => inputRef.current?.focus(), 120);
+  }, [autoCompose, user]);
+  const [inputHost, setInputHost] = useState(null);
+  useEffect(() => {
+    if (!inputHostRef) return;
+    setInputHost(inputHostRef.current ?? null);
+  }, [inputHostRef]);
+  useEffect(() => {
+    if (initialComments) {
+      setCommentsLoading(false);
+      onCountChangeRef.current?.(countAll(initialComments));
+      return;
+    }
+    let active = true;
+    setCommentsLoading(true);
+    getComments(targetId).then((data) => {
+      if (!active) return;
+      const list = Array.isArray(data) ? data : [];
+      setComments(list);
+      const n = countAll(list);
+      setTotalCount(n);
+      onCountChangeRef.current?.(n);
+    }).catch(() => {
+      if (active && showErrorRetry) setLoadError(true);
+    }).finally(() => {
+      if (active) setCommentsLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [targetId, getComments, retryTick, showErrorRetry]);
+  function retryLoad() {
+    setLoadError(false);
+    setCommentsLoading(true);
+    setRetryTick((t) => t + 1);
+  }
+  function cancelCompose() {
+    setComposing(false);
+    setReplyTo(null);
+    setCommentInput("");
+    setShowEmoji(false);
+  }
+  async function handleCommentLike(commentId) {
+    const alreadyLiked = likedCommentIds.has(commentId);
+    try {
+      const data = await likeComment(commentId, alreadyLiked);
+      const newLikes = typeof data?.likes === "number" ? data.likes : 0;
+      setLikedCommentIds((p) => {
+        const n = new Set(p);
+        if (alreadyLiked) n.delete(commentId);
+        else n.add(commentId);
+        localStorage.setItem(likedKey, JSON.stringify([...n]));
+        return n;
+      });
+      setComments(
+        (prev) => prev.map((c) => updateCommentLikes(c, commentId, newLikes))
+      );
+    } catch {
+    }
+  }
+  function updateCommentLikes(c, targetId2, likes) {
+    if (c.id === targetId2) return { ...c, likes };
+    if (c.replies?.length)
+      return { ...c, replies: c.replies.map((r) => updateCommentLikes(r, targetId2, likes)) };
+    return c;
+  }
+  function startReply(c) {
+    if (!user) {
+      openLogin();
+      return;
+    }
+    setReplyTo(c);
+    setComposing(true);
+    setCommentInput("");
+    setShowEmoji(false);
+    setTimeout(() => inputRef.current?.focus(), 120);
+  }
+  function findTopLevelId(comments2, targetId2) {
+    for (const c of comments2) {
+      if (c.id === targetId2) return c.id;
+      for (const r of c.replies ?? []) {
+        if (r.id === targetId2) return c.id;
+        for (const rr of r.replies ?? []) {
+          if (rr.id === targetId2) return c.id;
+        }
+      }
+    }
+    return null;
+  }
+  function insertReply(list, parentId, nc) {
+    return list.map((c) => {
+      if (c.id === parentId) {
+        return { ...c, replies: [...c.replies ?? [], nc] };
+      }
+      if (c.replies?.length) {
+        return { ...c, replies: insertReply(c.replies, parentId, nc) };
+      }
+      return c;
+    });
+  }
+  async function handleSubmitComment() {
+    if (!commentInput.trim() || submitting) return;
+    if (!user) {
+      openLogin();
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const nc = await createComment({
+        targetId,
+        content: commentInput.trim(),
+        parent_id: replyTo?.id
+      });
+      if (replyTo) {
+        const topId = findTopLevelId(comments, replyTo.id) ?? replyTo.id;
+        const next = insertReply(comments, replyTo.id, { ...nc, replies: [] });
+        setComments(next);
+        setTotalCount(countAll(next));
+        onCountChangeRef.current?.(countAll(next));
+        setExpandedReplies((p) => /* @__PURE__ */ new Set([...p, topId]));
+      } else {
+        const next = [...comments, { ...nc, replies: [] }];
+        setComments(next);
+        setTotalCount(countAll(next));
+        onCountChangeRef.current?.(countAll(next));
+      }
+      setCommentInput("");
+      setReplyTo(null);
+      setComposing(false);
+      setShowEmoji(false);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "\u53D1\u9001\u5931\u8D25");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+  function handleCommentButton() {
+    if (kind === "project") {
+      listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (!user) {
+      openLogin();
+      return;
+    }
+    setComposing(true);
+    setShowEmoji(false);
+    setTimeout(() => inputRef.current?.focus(), 80);
+  }
+  function insertEmoji(emoji) {
+    setCommentInput((v) => v + emoji);
+    setShowEmoji(false);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+  function toggleEmoji() {
+    if (showEmoji) {
+      setShowEmoji(false);
+      return;
+    }
+    const btn = emojiBtnRef.current;
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - 316));
+      if (r.top > 210) {
+        setEmojiPos({ left, bottom: window.innerHeight - r.top + 8 });
+      } else {
+        setEmojiPos({ left, top: r.bottom + 8 });
+      }
+    }
+    setShowEmoji(true);
+  }
+  const loggedIn = Boolean(user);
+  const usePortal = Boolean(inputHostRef);
+  const inputArea = /* @__PURE__ */ jsxs("div", { className: kind === "project" ? "pt-1.5" : "", children: [
+    /* @__PURE__ */ jsx(AnimatePresence, { children: composing && loggedIn && replyTo && /* @__PURE__ */ jsx(
+      motion.div,
+      {
+        initial: { height: 0, opacity: 0 },
+        animate: { height: "auto", opacity: 1 },
+        exit: { height: 0, opacity: 0 },
+        className: "overflow-hidden",
+        children: /* @__PURE__ */ jsxs("div", { className: "pt-1 pb-1.5 pl-3 md:pl-4", children: [
+          /* @__PURE__ */ jsxs("div", { className: "text-[14px] font-medium text-slate-700 dark:text-slate-200", children: [
+            "\u56DE\u590D ",
+            replyTo.email_user_name || "\u533F\u540D"
+          ] }),
+          /* @__PURE__ */ jsx("div", { className: "mt-0.5 text-[14px] text-slate-500 dark:text-slate-400 truncate", children: replyTo.content })
+        ] })
+      }
+    ) }),
+    /* @__PURE__ */ jsxs("div", { className: "flex items-center", children: [
+      /* @__PURE__ */ jsxs(
+        "div",
+        {
+          className: `flex-1 min-w-0 flex items-center gap-2 rounded-full bg-slate-100/80 dark:bg-slate-800/70 border transition-colors ${composing && loggedIn ? "px-4 py-0.5 md:py-1 border-indigo-300 dark:border-indigo-500/50" : "pl-0.5 pr-2 md:pl-1 md:pr-2.5 py-0.5 md:py-1 border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"}`,
+          children: [
+            !(composing && loggedIn) && /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => loggedIn ? setComposing((v) => !v) : openLogin(),
+                className: "shrink-0 rounded-full overflow-hidden",
+                "aria-label": "\u5934\u50CF",
+                children: /* @__PURE__ */ jsx(
+                  "div",
+                  {
+                    className: `w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold ${loggedIn ? "bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 text-white text-xs md:text-sm" : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-300"}`,
+                    children: loggedIn ? (user.nickname || user.email || "?").slice(0, 1).toUpperCase() : /* @__PURE__ */ jsx(UserRound, { className: "w-4 h-4" })
+                  }
+                )
+              }
+            ),
+            composing && loggedIn ? /* @__PURE__ */ jsx(
+              "textarea",
+              {
+                ref: inputRef,
+                autoFocus: true,
+                value: commentInput,
+                onChange: (e) => setCommentInput(e.target.value),
+                placeholder: replyTo ? "\u5199\u4E0B\u4F60\u7684\u56DE\u590D..." : "\u8BF4\u70B9\u4EC0\u4E48...",
+                rows: 1,
+                onKeyDown: (e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
+                    handleSubmitComment();
+                },
+                className: "flex-1 min-w-0 h-7 md:h-8 pt-[6px] md:pt-[8px] pb-0 bg-transparent text-xs md:text-sm leading-4 text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none overflow-hidden outline-none"
+              }
+            ) : /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => loggedIn ? setComposing(true) : openLogin(),
+                className: "flex-1 min-w-0 text-left text-xs md:text-sm text-slate-400 dark:text-slate-500 cursor-pointer",
+                children: loggedIn ? "\u8BF4\u70B9\u4EC0\u4E48..." : "\u767B\u5F55\u8BC4\u8BBA"
+              }
+            )
+          ]
+        }
+      ),
+      !hideActions && !(composing && loggedIn) && /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: handleCommentButton,
+            className: `flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-sm md:text-base font-semibold text-slate-400 dark:text-slate-500 hover:text-indigo-500 transition-colors cursor-pointer ${kind === "project" ? "order-3" : ""}`,
+            "aria-label": "\u8BC4\u8BBA",
+            children: [
+              /* @__PURE__ */ jsx(MessageCircle, { className: "w-4 h-4 md:w-5 md:h-5" }),
+              /* @__PURE__ */ jsx("span", { className: "tabular-nums", children: (totalCount ?? 0) > 0 ? totalCount : "\u8BC4\u8BBA" })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: toggleEntityLike,
+            disabled: likeBusy,
+            className: `flex items-center gap-1 shrink-0 px-2 md:px-3 py-2 rounded-full text-sm md:text-base font-semibold transition-all cursor-pointer ${kind === "project" ? "order-2" : ""} ${entityLiked ? "text-pink-500" : "text-slate-400 dark:text-slate-500 hover:text-pink-500"}`,
+            "aria-label": "\u70B9\u8D5E",
+            children: [
+              /* @__PURE__ */ jsx(
+                Heart,
+                {
+                  className: `w-4 h-4 md:w-5 md:h-5 transition-all ${entityLiked ? "fill-pink-500 scale-110" : ""}`
+                }
+              ),
+              /* @__PURE__ */ jsx("span", { className: "tabular-nums", children: entityLikes > 0 ? entityLikes : "\u70B9\u8D5E" })
+            ]
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsx(AnimatePresence, { children: composing && loggedIn && /* @__PURE__ */ jsx(
+      motion.div,
+      {
+        initial: { height: 0, opacity: 0 },
+        animate: { height: "auto", opacity: 1 },
+        exit: { height: 0, opacity: 0 },
+        transition: { duration: 0.2 },
+        className: "overflow-hidden",
+        children: /* @__PURE__ */ jsxs("div", { className: "mt-2 flex items-center justify-between gap-2", children: [
+          /* @__PURE__ */ jsx("div", { className: "flex items-center gap-1 md:gap-2", children: /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              ref: emojiBtnRef,
+              onClick: toggleEmoji,
+              className: `p-1.5 rounded-full transition-colors cursor-pointer ${showEmoji ? "bg-indigo-50 dark:bg-slate-800 text-slate-500 dark:text-slate-300" : "text-slate-400 dark:text-slate-500 hover:bg-indigo-50 dark:hover:bg-slate-800"}`,
+              title: "\u63D2\u5165\u8868\u60C5",
+              children: /* @__PURE__ */ jsx(Smile, { className: "w-4 h-4 md:w-5 md:h-5" })
+            }
+          ) }),
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: handleSubmitComment,
+                disabled: !commentInput.trim() || submitting,
+                className: "flex items-center justify-center min-w-[64px] px-4 py-1.5 rounded-full bg-indigo-600 text-xs md:text-sm font-medium text-white hover:bg-indigo-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer",
+                children: [
+                  submitting && /* @__PURE__ */ jsx(Loader2, { className: "w-3.5 h-3.5 mr-1 animate-spin" }),
+                  "\u53D1\u9001"
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                type: "button",
+                onClick: cancelCompose,
+                className: "min-w-[64px] px-4 py-1.5 rounded-full text-xs md:text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors cursor-pointer",
+                children: "\u53D6\u6D88"
+              }
+            )
+          ] })
+        ] })
+      }
+    ) }),
+    showEmoji && typeof document !== "undefined" && emojiPos && createPortal(
+      /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-[300]", onClick: () => setShowEmoji(false), children: /* @__PURE__ */ jsx(
+        "div",
+        {
+          className: "absolute w-[300px] max-w-[85vw]",
+          style: { left: emojiPos.left, top: emojiPos.top, bottom: emojiPos.bottom },
+          onClick: (e) => e.stopPropagation(),
+          children: /* @__PURE__ */ jsx("div", { className: "p-2 grid grid-cols-10 gap-0.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl max-h-44 overflow-y-auto", children: EMOJIS.map((e) => /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => insertEmoji(e),
+              className: "text-base md:text-lg p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded cursor-pointer",
+              children: e
+            },
+            e
+          )) })
+        }
+      ) }),
+      document.body
+    )
+  ] });
+  return /* @__PURE__ */ jsxs("div", { children: [
+    !usePortal && inputArea,
+    /* @__PURE__ */ jsxs("div", { ref: listRef, className: kind === "project" ? "mt-0" : "mt-3", children: [
+      showErrorRetry && loadError && /* @__PURE__ */ jsxs("div", { className: "text-center py-8 md:py-12 text-slate-400", children: [
+        /* @__PURE__ */ jsx(MessageCircle, { className: "w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 md:mb-3 opacity-40" }),
+        /* @__PURE__ */ jsx("p", { className: "text-xs md:text-sm mb-3", children: "\u8BC4\u8BBA\u52A0\u8F7D\u5931\u8D25" }),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            onClick: retryLoad,
+            className: "text-[10px] md:text-xs text-sky-500 hover:text-sky-600 transition-colors underline underline-offset-2",
+            children: "\u91CD\u65B0\u52A0\u8F7D"
+          }
+        )
+      ] }),
+      commentsLoading && !loadError && /* @__PURE__ */ jsx("div", { className: "space-y-3", children: [1, 2].map((i) => /* @__PURE__ */ jsx(
+        "div",
+        {
+          className: "h-10 rounded-xl bg-white/30 dark:bg-slate-700/20 animate-pulse"
+        },
+        i
+      )) }),
+      !commentsLoading && comments.length === 0 && !loadError && /* @__PURE__ */ jsx("div", { className: "text-center py-3 text-xs md:text-sm text-slate-400", children: "\u6682\u65F6\u6CA1\u6709\u8BC4\u8BBA" }),
+      !commentsLoading && comments.length > 0 && /* @__PURE__ */ jsx("div", { className: kind === "project" ? "" : "space-y-3 md:space-y-4", children: comments.map((comment) => /* @__PURE__ */ jsx(
+        CommentCard,
+        {
+          comment,
+          flat: true,
+          expandedReplies,
+          onReply: startReply,
+          onToggleReplies: (id) => setExpandedReplies((p) => {
+            const n = new Set(p);
+            if (n.has(id)) n.delete(id);
+            else n.add(id);
+            return n;
+          }),
+          likedCommentIds,
+          onCommentLike: handleCommentLike
+        },
+        comment.id
+      )) })
+    ] }),
+    inputHost ? createPortal(inputArea, inputHost) : null
+  ] });
+}
+function CommentCard({
+  comment,
+  expandedReplies,
+  onReply,
+  onToggleReplies,
+  likedCommentIds,
+  onCommentLike,
+  flat = false
+}) {
+  const isExpanded = expandedReplies.has(comment.id);
+  const flatReplies = flattenReplies(comment.replies ?? []);
+  const replyCount = flatReplies.length;
+  const restCount = Math.max(0, replyCount - 1);
+  const nameText = comment.email_user_name || "\u533F\u540D\u7528\u6237";
+  if (flat) {
+    return /* @__PURE__ */ jsxs("div", { className: "py-3 md:py-4", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-2.5 md:gap-3", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-xs md:text-sm font-bold shrink-0", children: (comment.email_user_name || "\u533F").slice(0, 1).toUpperCase() }),
+        /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+            /* @__PURE__ */ jsx("span", { className: "text-[13px] md:text-[14px] font-medium text-slate-700 dark:text-slate-200 truncate", children: nameText }),
+            /* @__PURE__ */ jsx("span", { className: "text-[13px] md:text-[14px] text-slate-400 dark:text-slate-500 shrink-0", children: relativeTime(comment.created_at) })
+          ] }),
+          /* @__PURE__ */ jsx("p", { className: "mt-1 text-[13px] md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words", children: comment.content }),
+          /* @__PURE__ */ jsxs("div", { className: "mt-1.5 md:mt-2 flex items-center gap-4 md:gap-5 text-[12px] md:text-sm text-slate-500 dark:text-slate-400", children: [
+            /* @__PURE__ */ jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: () => onCommentLike(comment.id),
+                className: `flex items-center gap-1 transition-colors cursor-pointer ${likedCommentIds.has(comment.id) ? "text-pink-500" : "hover:text-pink-500"}`,
+                children: [
+                  /* @__PURE__ */ jsx(
+                    Heart,
+                    {
+                      className: `w-3.5 h-3.5 md:w-4 md:h-4 transition-all ${likedCommentIds.has(comment.id) ? "fill-pink-500" : ""}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsx("span", { children: comment.likes > 0 ? comment.likes : "\u70B9\u8D5E" })
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: () => onReply(comment),
+                className: "flex items-center gap-1 hover:text-sky-500 transition-colors cursor-pointer",
+                children: [
+                  /* @__PURE__ */ jsx(MessageCircle, { className: "w-3.5 h-3.5 md:w-4 md:h-4" }),
+                  /* @__PURE__ */ jsx("span", { children: replyCount > 0 ? replyCount : "\u56DE\u590D" })
+                ]
+              }
+            )
+          ] })
+        ] })
+      ] }),
+      replyCount > 0 && /* @__PURE__ */ jsxs("div", { className: "mt-1 pl-10 md:pl-[52px]", children: [
+        /* @__PURE__ */ jsx(
+          ReplyCard,
+          {
+            reply: flatReplies[0],
+            flat: true,
+            onReply,
+            likedCommentIds,
+            onCommentLike
+          }
+        ),
+        isExpanded && flatReplies.slice(1).map((reply) => /* @__PURE__ */ jsx(
+          ReplyCard,
+          {
+            reply,
+            flat: true,
+            onReply,
+            likedCommentIds,
+            onCommentLike
+          },
+          reply.id
+        )),
+        restCount > 0 && /* @__PURE__ */ jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => onToggleReplies(comment.id),
+            className: "text-[11px] md:text-xs text-slate-400 hover:text-indigo-500 transition-colors py-1 cursor-pointer",
+            children: isExpanded ? "\u6536\u8D77\u56DE\u590D" : `\u5C55\u5F00 ${restCount} \u6761\u56DE\u590D`
+          }
+        )
+      ] })
+    ] });
+  }
+  return /* @__PURE__ */ jsxs("div", { className: "rounded-2xl bg-white/50 dark:bg-slate-800/60 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300", children: [
+    /* @__PURE__ */ jsxs("div", { className: "p-3 md:p-5", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 md:gap-3 mb-2 md:mb-3", children: [
+        /* @__PURE__ */ jsx("div", { className: "w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-xs md:text-sm font-bold shrink-0", children: (comment.email_user_name || "\u533F").slice(0, 1).toUpperCase() }),
+        /* @__PURE__ */ jsx("div", { className: "flex-1 min-w-0", children: /* @__PURE__ */ jsx("span", { className: "text-xs md:text-sm font-semibold text-slate-800 dark:text-slate-200", children: nameText }) }),
+        /* @__PURE__ */ jsx("span", { className: "text-[10px] md:text-xs text-slate-400 dark:text-slate-500 shrink-0", children: relativeTime(comment.created_at) })
+      ] }),
+      /* @__PURE__ */ jsx("p", { className: "text-xs md:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap mb-3 md:mb-4", children: comment.content }),
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 md:gap-4 pt-2 md:pt-3 border-t border-slate-200/50 dark:border-white/5", children: [
+        /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => onCommentLike(comment.id),
+            className: `flex items-center gap-1 md:gap-1.5 text-[10px] md:text-xs transition-colors ${likedCommentIds.has(comment.id) ? "text-pink-500" : "text-slate-400 hover:text-pink-500"}`,
+            children: [
+              /* @__PURE__ */ jsx(
+                Heart,
+                {
+                  className: `w-3.5 h-3.5 md:w-4 md:h-4 transition-all duration-300 ${likedCommentIds.has(comment.id) ? "fill-pink-500 scale-110" : ""}`
+                }
+              ),
+              /* @__PURE__ */ jsx("span", { children: comment.likes })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => onReply(comment),
+            className: "flex items-center gap-1 md:gap-1.5 text-[10px] md:text-xs text-slate-400 hover:text-sky-500 transition-colors",
+            children: [
+              /* @__PURE__ */ jsx(MessageCircle, { className: "w-3.5 h-3.5 md:w-4 md:h-4" }),
+              /* @__PURE__ */ jsx("span", { children: "\u56DE\u590D" })
+            ]
+          }
+        ),
+        replyCount > 0 && /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => onToggleReplies(comment.id),
+            className: "flex items-center gap-1 md:gap-1.5 text-[10px] md:text-xs text-slate-400 hover:text-blue-500 transition-colors ml-auto",
+            children: [
+              isExpanded ? /* @__PURE__ */ jsx(ChevronUp, { className: "w-3 h-3 md:w-3.5 md:h-3.5" }) : /* @__PURE__ */ jsx(ChevronDown, { className: "w-3 h-3 md:w-3.5 md:h-3.5" }),
+              /* @__PURE__ */ jsxs("span", { children: [
+                replyCount,
+                " \u6761\u56DE\u590D"
+              ] })
+            ]
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsx(AnimatePresence, { children: isExpanded && replyCount > 0 && /* @__PURE__ */ jsx(
+      motion.div,
+      {
+        initial: { height: 0, opacity: 0 },
+        animate: { height: "auto", opacity: 1 },
+        exit: { height: 0, opacity: 0 },
+        transition: { duration: 0.3 },
+        className: "overflow-hidden",
+        children: /* @__PURE__ */ jsx("div", { className: "border-t border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30", children: flatReplies.map((reply) => /* @__PURE__ */ jsx(
+          ReplyCard,
+          {
+            reply,
+            onReply,
+            likedCommentIds,
+            onCommentLike
+          },
+          reply.id
+        )) })
+      }
+    ) })
+  ] });
+}
+function ReplyCard({
+  reply,
+  onReply,
+  likedCommentIds,
+  onCommentLike,
+  flat = false
+}) {
+  const nameText = reply.email_user_name || "\u533F\u540D\u7528\u6237";
+  if (flat) {
+    return /* @__PURE__ */ jsx("div", { className: "py-2", children: /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-2", children: [
+      /* @__PURE__ */ jsx("div", { className: "w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-[10px] md:text-xs font-bold mt-0.5 shrink-0", children: (reply.email_user_name || "\u533F").slice(0, 1).toUpperCase() }),
+      /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+          /* @__PURE__ */ jsx("span", { className: "text-[13px] md:text-[14px] font-medium text-slate-700 dark:text-slate-200 truncate", children: nameText }),
+          /* @__PURE__ */ jsx("span", { className: "text-[13px] md:text-[14px] text-slate-400 dark:text-slate-500 shrink-0", children: relativeTime(reply.created_at) })
+        ] }),
+        /* @__PURE__ */ jsxs("p", { className: "mt-0.5 text-[13px] md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words", children: [
+          reply.replyToUser && /* @__PURE__ */ jsxs("span", { className: "text-sky-500 dark:text-sky-400 mr-1", children: [
+            "\u56DE\u590D @",
+            reply.replyToUser,
+            "\uFF1A"
+          ] }),
+          reply.content
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "mt-1 flex items-center gap-4 md:gap-5 text-[12px] md:text-sm text-slate-500 dark:text-slate-400", children: [
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => onCommentLike(reply.id),
+              className: `flex items-center gap-1 transition-colors cursor-pointer ${likedCommentIds.has(reply.id) ? "text-pink-500" : "hover:text-pink-500"}`,
+              children: [
+                /* @__PURE__ */ jsx(
+                  Heart,
+                  {
+                    className: `w-3.5 h-3.5 md:w-4 md:h-4 transition-all ${likedCommentIds.has(reply.id) ? "fill-pink-500" : ""}`
+                  }
+                ),
+                /* @__PURE__ */ jsx("span", { children: reply.likes > 0 ? reply.likes : "\u70B9\u8D5E" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => onReply(reply),
+              className: "flex items-center gap-1 hover:text-sky-500 transition-colors cursor-pointer",
+              children: [
+                /* @__PURE__ */ jsx(MessageCircle, { className: "w-3.5 h-3.5 md:w-4 md:h-4" }),
+                /* @__PURE__ */ jsx("span", { children: "\u56DE\u590D" })
+              ]
+            }
+          )
+        ] })
+      ] })
+    ] }) });
+  }
+  return /* @__PURE__ */ jsx("div", { className: "px-3 py-2 md:px-5 md:py-3 border-b border-slate-200/30 dark:border-white/5 last:border-0", children: /* @__PURE__ */ jsxs("div", { className: "flex items-start gap-2 md:gap-3", children: [
+    /* @__PURE__ */ jsx("div", { className: "w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 flex items-center justify-center text-white text-[10px] md:text-xs font-bold mt-0.5 shrink-0", children: (reply.email_user_name || "\u533F").slice(0, 1).toUpperCase() }),
+    /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1", children: [
+        /* @__PURE__ */ jsx("span", { className: "text-[10px] md:text-xs font-semibold text-slate-700 dark:text-slate-300", children: nameText }),
+        /* @__PURE__ */ jsx("span", { className: "text-[10px] md:text-xs text-slate-400", children: relativeTime(reply.created_at) })
+      ] }),
+      /* @__PURE__ */ jsxs("p", { className: "text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap", children: [
+        reply.replyToUser && /* @__PURE__ */ jsxs("span", { className: "text-sky-500 dark:text-sky-400 mr-1", children: [
+          "\u56DE\u590D @",
+          reply.replyToUser,
+          "\uFF1A"
+        ] }),
+        reply.content
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 md:gap-3 mt-1.5 md:mt-2", children: [
+        /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => onCommentLike(reply.id),
+            className: `flex items-center gap-0.5 md:gap-1 text-[10px] md:text-xs transition-colors ${likedCommentIds.has(reply.id) ? "text-pink-500" : "text-slate-400 hover:text-pink-500"}`,
+            children: [
+              /* @__PURE__ */ jsx(
+                Heart,
+                {
+                  className: `w-3 h-3 md:w-3.5 md:h-3.5 ${likedCommentIds.has(reply.id) ? "fill-pink-500" : ""}`
+                }
+              ),
+              /* @__PURE__ */ jsx("span", { children: reply.likes })
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => onReply(reply),
+            className: "flex items-center gap-0.5 md:gap-1 text-[10px] md:text-xs text-slate-400 hover:text-sky-500 transition-colors",
+            children: [
+              /* @__PURE__ */ jsx(Reply, { className: "w-3 h-3 md:w-3.5 md:h-3.5" }),
+              /* @__PURE__ */ jsx("span", { children: "\u56DE\u590D" })
+            ]
+          }
+        )
+      ] })
+    ] })
+  ] }) });
+}

@@ -7,7 +7,7 @@ import SafeImage from "@/components/ui/SafeImage";
 import { type ProjectItem } from "@/app/api";
 import CommentAuthProvider from "@/components/providers/CommentAuthProvider";
 import ProjectComments from "./ProjectComments";
-import { formatDateCN } from "@/app/lib/format";
+import { formatDateCN, relativeTime } from "@/app/lib/format";
 import { siteConfig } from "@/siteConfig";
 import { useConfigValue } from "@/components/providers/SiteConfigProvider";
 import PageHeader from "@/components/ui/PageHeader";
@@ -272,7 +272,7 @@ function ProjectDetailModal({
           <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900">
             <div className="flex-1 min-h-0 flex flex-col">
               {/* 顶部信息滚动区 */}
-              <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-7 pt-5 pb-3 space-y-5">
+              <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-7 pt-8 md:pt-10 pb-3 space-y-5">
               <div>
                 <h2 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
                   {project.name}
@@ -342,7 +342,7 @@ function ProjectDetailModal({
               )}
 
               {project.long_description && (
-                <div className="prose prose-slate dark:prose-invert max-w-none text-[13px] leading-7 text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                <div className="prose prose-slate dark:prose-invert prose-base md:prose-lg max-w-none text-slate-800 dark:text-slate-200 whitespace-pre-wrap transition-colors duration-700">
                   {project.long_description}
                 </div>
               )}
@@ -361,9 +361,9 @@ function ProjectDetailModal({
                 </div>
               )}
 
-              {/* 发表时间 */}
-              <div className="text-[11px] text-slate-400">
-                发表于 {formatDateCN(new Date(project.created_at))}
+              {/* 发表时间：相对时间，字号/颜色与评论区时间一致 */}
+              <div className="text-[13px] md:text-[14px] text-slate-400 dark:text-slate-500">
+                发表于 {relativeTime(project.created_at)}
               </div>
 
               {/* 分割线：位于"发表于"下方，下方为评论列表 */}
