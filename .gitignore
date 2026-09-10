@@ -86,3 +86,7 @@ _tmp_*
 # local edgeone link state & AI workspace memory (never commit)
 .edgeone/
 .workbuddy/
+
+# 本地临时构建产物
+/tmp/
+/dev/
