@@ -31,7 +31,7 @@ export default function SegmentedFilter({
 }) {
   return (
     <div
-      className={`flex flex-wrap gap-2 bg-white/30 dark:bg-slate-800/30 backdrop-blur-md p-4 rounded-3xl border border-white/20 dark:border-white/5 ${
+      className={`flex flex-wrap gap-2 bg-white/30 dark:bg-slate-800/30 backdrop-blur-md p-3 rounded-3xl border border-white/20 dark:border-white/5 ${
         variant === "bar" ? "w-full" : "w-fit mx-auto"
       } ${className}`}
     >
@@ -47,7 +47,7 @@ export default function SegmentedFilter({
               key={opt.value}
               type="button"
               onClick={() => onChange(opt.value)}
-              className={`flex items-center gap-1.5 md:gap-2 px-4 py-2 rounded-xl text-[14px] font-bold transition-all duration-300 ${
+              className={`flex items-center gap-1.5 md:gap-2 px-3 py-2 rounded-xl text-[14px] font-bold transition-all duration-300 ${
                 isActive
                   ? "bg-indigo-500 text-white shadow-md"
                   : "text-slate-600 dark:text-slate-400 hover:text-indigo-500"

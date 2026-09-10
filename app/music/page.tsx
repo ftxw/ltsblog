@@ -414,7 +414,7 @@ export default function MusicClient() {
                               </div>
                               <div className="flex flex-col truncate">
                                 <span
-                                  className={`text-sm md:text-[15px] font-black truncate ${
+                                  className={`text-sm md:text-[16px] font-black truncate ${
                                     isPlayingThis
                                       ? "text-indigo-600 dark:text-indigo-400"
                                       : "text-slate-800 dark:text-slate-200"
@@ -422,7 +422,7 @@ export default function MusicClient() {
                                 >
                                   {song.title}
                                 </span>
-                                <span className="text-[10px] md:text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                <span className="text-[10px] md:text-[12px] font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">
                                   {song.artist}
                                 </span>
                               </div>

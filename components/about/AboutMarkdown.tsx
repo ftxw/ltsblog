@@ -14,18 +14,24 @@ import "katex/dist/katex.min.css";
  */
 
 const PROSE_STYLE = `
-  .prose h1 { font-size: 1.8rem !important; font-weight: 900 !important; margin-bottom: 1.2rem !important; margin-top: 2rem !important; line-height: 1.3 !important; color: inherit !important; }
-  .prose h2 { font-size: 1.5rem !important; font-weight: 800 !important; margin-bottom: 1rem !important; margin-top: 1.5rem !important; color: inherit !important; }
-  .prose h3 { font-size: 1.2rem !important; font-weight: 700 !important; margin-bottom: 0.8rem !important; color: inherit !important; }
-  .prose p { font-size: 0.95rem !important; line-height: 1.75 !important; color: inherit !important; }
+  .prose { max-width: none; color: #334155; }
+  .dark .prose { color: #cbd5e1; }
+  .prose h1 { font-size: 1.875rem !important; font-weight: 800 !important; margin-bottom: 1.5rem !important; margin-top: 2rem !important; line-height: 1.3 !important; color: #0f172a !important; letter-spacing: -0.025em; }
+  .dark .prose h1 { color: #f8fafc !important; }
+  .prose h2 { font-size: 1.5rem !important; font-weight: 700 !important; margin-bottom: 1rem !important; margin-top: 2.5rem !important; padding-bottom: 0.5rem !important; border-bottom: 2px solid #e2e8f0 !important; color: #0f172a !important; letter-spacing: -0.02em; }
+  .dark .prose h2 { color: #f8fafc !important; border-bottom-color: #334155 !important; }
+  .prose h3 { font-size: 1.25rem !important; font-weight: 600 !important; margin-top: 2rem !important; margin-bottom: 0.75rem !important; color: #0f172a !important; }
+  .dark .prose h3 { color: #f8fafc !important; }
+  .prose p { font-size: 1rem !important; line-height: 1.85 !important; color: #334155 !important; margin-bottom: 1.5rem !important; }
+  .dark .prose p { color: #cbd5e1 !important; }
 
   .prose a { color: #6366f1 !important; text-decoration: none !important; font-weight: 600 !important; border-bottom: 1px dashed #6366f1 !important; transition: all 0.3s ease !important; }
   .prose a:hover { color: #4f46e5 !important; border-bottom-style: solid !important; background-color: rgba(99, 102, 241, 0.1) !important; padding: 0 0.2rem !important; border-radius: 0.2rem !important; }
   .dark .prose a { color: #818cf8 !important; border-bottom-color: #818cf8 !important; }
   .dark .prose a:hover { color: #a5b4fc !important; background-color: rgba(129, 140, 248, 0.15) !important; }
 
-  .prose ul { list-style-type: disc !important; padding-left: 1.5rem !important; font-size: 0.95rem !important; }
-  .prose ol { list-style-type: decimal !important; padding-left: 1.5rem !important; font-size: 0.95rem !important; }
+  .prose ul { list-style-type: disc !important; padding-left: 1.5rem !important; font-size: 1rem !important; }
+  .prose ol { list-style-type: decimal !important; padding-left: 1.5rem !important; font-size: 1rem !important; }
   .prose li { display: list-item !important; margin-bottom: 0.5rem !important; }
 
   .prose ul ul, .prose ol ul { list-style-type: circle !important; margin-top: 0.25rem !important; margin-bottom: 0.25rem !important; }
@@ -88,12 +94,19 @@ const PROSE_STYLE = `
   .prose pre code .hljs-attr, .prose pre code .hljs-variable, .prose pre code .hljs-template-variable, .prose pre code .hljs-selector-class, .prose pre code .hljs-selector-attr, .prose pre code .hljs-selector-pseudo, .prose pre code .hljs-number { color: #d19a66 !important; }
   .prose pre code .hljs-symbol, .prose pre code .hljs-bullet, .prose pre code .hljs-link, .prose pre code .hljs-meta, .prose pre code .hljs-selector-id, .prose pre code .hljs-title, .prose pre code .hljs-title.function_ { color: #61aeee !important; }
 
+  @media (max-width: 768px) {
+    .prose { font-size: 1rem; }
+    .prose p { font-size: 1rem; }
+    .prose h1 { font-size: 1.5rem !important; }
+    .prose h2 { font-size: 1.35rem !important; }
+  }
+
   @media (min-width: 768px) {
-    .prose h1 { font-size: 3rem !important; font-weight: 950 !important; margin-bottom: 2rem !important; margin-top: 3rem !important; line-height: 1.1 !important; }
-    .prose h2 { font-size: 2.2rem !important; margin-bottom: 1.5rem !important; margin-top: 2rem !important; }
-    .prose h3 { font-size: 1.5rem !important; margin-bottom: 1rem !important; }
-    .prose p { font-size: 1.15rem !important; line-height: 1.85 !important; }
-    .prose ul, .prose ol { padding-left: 2rem !important; font-size: 1.1rem !important; }
+    .prose h1 { font-size: 1.875rem !important; font-weight: 800 !important; margin-bottom: 1.5rem !important; margin-top: 2rem !important; line-height: 1.3 !important; }
+    .prose h2 { font-size: 1.5rem !important; margin-bottom: 1rem !important; margin-top: 2.5rem !important; }
+    .prose h3 { font-size: 1.25rem !important; margin-bottom: 0.75rem !important; }
+    .prose p { font-size: 1rem !important; line-height: 1.85 !important; }
+    .prose ul, .prose ol { padding-left: 2rem !important; font-size: 1rem !important; }
     .prose pre { padding: 1.25rem !important; margin-top: 1.5rem !important; margin-bottom: 1.5rem !important; border-radius: 1.5rem !important; }
     .prose pre code { font-size: 0.9em !important; }
     .prose p code, .prose li code { padding: 0.2rem 0.4rem !important; font-size: 0.9em !important; border-radius: 0.375rem !important; }
@@ -109,8 +122,7 @@ export default async function AboutMarkdown({ markdown }: { markdown: string }) 
     <div className="relative">
       <style>{PROSE_STYLE}</style>
       <div
-        className="prose prose-slate dark:prose-invert prose-base md:prose-lg max-w-none text-slate-800 dark:text-slate-200 font-serif transition-colors duration-700 leading-relaxed scroll-smooth"
-        style={{ fontFamily: "var(--font-noto-serif-sc), ui-serif, Georgia, serif" }}
+        className="prose prose-slate dark:prose-invert prose-base max-w-none text-slate-800 dark:text-slate-200 transition-colors duration-700"
         dangerouslySetInnerHTML={{ __html: contentHtml }}
       />
     </div>

@@ -740,7 +740,7 @@ function CommentCard({
               <button
                 type="button"
                 onClick={() => onToggleReplies(comment.id)}
-                className="text-[11px] md:text-xs text-slate-400 hover:text-indigo-500 transition-colors py-1 cursor-pointer"
+                className="text-[12px] md:text-xs text-slate-400 hover:text-indigo-500 transition-colors py-1 cursor-pointer"
               >
                 {isExpanded ? "收起回复" : `展开 ${restCount} 条回复`}
               </button>

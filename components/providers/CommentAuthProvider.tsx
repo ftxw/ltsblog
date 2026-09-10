@@ -342,7 +342,7 @@ function CommentLoginModal() {
               </button>
             </form>
 
-            <p className="mt-4 text-center text-[11px] text-slate-400 flex items-center justify-center gap-1">
+            <p className="mt-4 text-center text-[12px] text-slate-400 flex items-center justify-center gap-1">
               <Smile className="w-3 h-3" />
               评论需登录真实账号，未注册请切换到「注册」
             </p>

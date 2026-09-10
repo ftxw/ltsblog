@@ -172,7 +172,7 @@ export default function AdminDashboardPage() {
                       className="flex items-center gap-3 py-2.5"
                     >
                       <span
-                        className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                        className={`shrink-0 rounded px-1.5 py-0.5 text-[12px] font-medium ${
                           item.type === "post"
                             ? "bg-indigo-50 text-indigo-600"
                             : "bg-violet-50 text-violet-600"
@@ -207,14 +207,14 @@ export default function AdminDashboardPage() {
                         <span className="min-w-0 truncate text-sm font-medium text-slate-700">
                           {item.author}
                         </span>
-                        <span className="shrink-0 text-[11px] text-slate-400">
+                        <span className="shrink-0 text-[12px] text-slate-400">
                           {formatDate(item.time)}
                         </span>
                       </div>
                       <p className="mt-0.5 truncate text-xs text-slate-500">
                         {item.content}
                       </p>
-                      <p className="mt-0.5 truncate text-[11px] text-slate-400">
+                      <p className="mt-0.5 truncate text-[12px] text-slate-400">
                         来自{item.type}：{item.target || "-"}
                       </p>
                     </li>
@@ -292,11 +292,11 @@ export default function AdminDashboardPage() {
                           <p className="truncate font-mono text-xs text-slate-700">
                             {v.ip || "-"}
                           </p>
-                          <p className="truncate text-[11px] text-slate-400">
+                          <p className="truncate text-[12px] text-slate-400">
                             {v.address || "未知"} · {v.browser || "未知浏览器"}
                           </p>
                         </div>
-                        <span className="shrink-0 text-[11px] text-slate-400">
+                        <span className="shrink-0 text-[12px] text-slate-400">
                           {formatDate(v.time)}
                         </span>
                       </li>
@@ -334,7 +334,7 @@ export default function AdminDashboardPage() {
                       className="flex items-center gap-3 py-2.5"
                     >
                       <span
-                        className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                        className={`shrink-0 rounded px-1.5 py-0.5 text-[12px] font-medium ${
                           success
                             ? "bg-emerald-50 text-emerald-600"
                             : "bg-red-50 text-red-600"
@@ -346,12 +346,12 @@ export default function AdminDashboardPage() {
                         <p className="truncate text-sm text-slate-700">
                           {log.summary}
                         </p>
-                        <p className="truncate text-[11px] text-slate-400">
+                        <p className="truncate text-[12px] text-slate-400">
                           {log.ip || "-"} · {log.address || "未知位置"} ·{" "}
                           {log.browser || "未知浏览器"} · {log.system || "未知系统"}
                         </p>
                       </div>
-                      <span className="shrink-0 text-[11px] text-slate-400">
+                      <span className="shrink-0 text-[12px] text-slate-400">
                         {formatDate(log.operatingTime)}
                       </span>
                     </li>
@@ -497,7 +497,7 @@ function LineChart({
               transform: "translate(-50%, -100%)",
             }}
           >
-            <div className="whitespace-nowrap rounded-lg bg-slate-900/90 px-2.5 py-1.5 text-[11px] leading-relaxed text-white shadow-lg backdrop-blur">
+            <div className="whitespace-nowrap rounded-lg bg-slate-900/90 px-2.5 py-1.5 text-[12px] leading-relaxed text-white shadow-lg backdrop-blur">
               <p className="font-semibold">{active.date}</p>
               <p className="mt-0.5">
                 <span className="text-blue-400">PV</span>{" "}

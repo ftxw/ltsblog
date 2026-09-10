@@ -98,7 +98,7 @@ function ProjectTimelineNode({
           {/* 下半部分：文本信息 */}
           <div className="p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-indigo-600 dark:text-indigo-400 font-bold text-[11px] flex items-center gap-1 uppercase tracking-wider">
+              <div className="text-indigo-600 dark:text-indigo-400 font-bold text-[12px] flex items-center gap-1 uppercase tracking-wider">
                 <Clock className="w-3.5 h-3.5" strokeWidth={2.5} />
                 {formatDateCN(new Date(project.created_at))}
               </div>
@@ -294,7 +294,7 @@ function ProjectDetailModal({
                       href={project.link_github}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 dark:bg-slate-700 text-white text-[11px] font-medium hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 dark:bg-slate-700 text-white text-[12px] font-medium hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
                     >
                       <GitBranch className="w-3.5 h-3.5" />
                       GitHub
@@ -305,7 +305,7 @@ function ProjectDetailModal({
                       href={project.link_gitee}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500 text-white text-[11px] font-medium hover:bg-red-600 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500 text-white text-[12px] font-medium hover:bg-red-600 transition-colors"
                     >
                       <GitFork className="w-3.5 h-3.5" />
                       Gitee
@@ -316,7 +316,7 @@ function ProjectDetailModal({
                       href={project.link_live}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-500 text-white text-[11px] font-medium hover:bg-sky-600 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-500 text-white text-[12px] font-medium hover:bg-sky-600 transition-colors"
                     >
                       <Globe className="w-3.5 h-3.5" />
                       在线预览
@@ -327,7 +327,7 @@ function ProjectDetailModal({
                       href={project.link_docs}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 text-white text-[11px] font-medium hover:bg-emerald-600 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 text-white text-[12px] font-medium hover:bg-emerald-600 transition-colors"
                     >
                       <BookOpen className="w-3.5 h-3.5" />
                       文档
@@ -353,7 +353,7 @@ function ProjectDetailModal({
                   {techStack.map((t) => (
                     <span
                       key={t}
-                      className="px-2.5 py-1 text-[11px] rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/40"
+                      className="px-2.5 py-1 text-[12px] rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/40"
                     >
                       {t}
                     </span>

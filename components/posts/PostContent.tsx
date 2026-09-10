@@ -131,7 +131,7 @@ export default function PostContent({ contentHtml, highlightKeyword }: PostConte
           }
           .dark .prose h3 { color: #f8fafc; }
           .prose p {
-            font-size: 1.0625rem;
+            font-size: 1rem;
             line-height: 1.85;
             color: #334155;
             margin-bottom: 1.5rem;
@@ -232,7 +232,7 @@ export default function PostContent({ contentHtml, highlightKeyword }: PostConte
           .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.35); border-radius: 8px; }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.6); }
           @media (max-width: 768px) {
-            .prose { font-size: 0.95rem; }
+            .prose { font-size: 1rem; }
             .prose p { font-size: 1rem; }
             .prose h1 { font-size: 1.5rem !important; }
             .prose h2 { font-size: 1.35rem !important; }

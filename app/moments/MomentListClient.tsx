@@ -205,12 +205,12 @@ export default function MomentListClient({ initialMoments }: { initialMoments: M
       {/* 底部一行：左侧时间/地点，右侧 ♡点赞 + 💬评论（最初位置） */}
       <div className="mt-5 md:mt-10 flex items-center justify-between gap-2 md:gap-3">
         <div className="min-w-0 flex-1 pr-2 flex items-center gap-1.5 md:gap-2">
-          <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 shrink-0 border border-slate-500/10">
+          <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[12px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 shrink-0 border border-slate-500/10">
             <Clock size={10} className="md:w-3 md:h-3 shrink-0" />
             {timeAgo(moment.date)}
           </span>
           {moment.location && (
-            <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[11px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 max-w-full truncate border border-indigo-500/10">
+            <span className="inline-flex items-center gap-1 md:gap-1.5 text-[9px] md:text-[12px] font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 max-w-full truncate border border-indigo-500/10">
               <MapPin size={10} className="md:w-3 md:h-3 shrink-0" />
               <span className="truncate">{moment.location}</span>
             </span>
