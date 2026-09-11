@@ -33,7 +33,7 @@ export default function Sakura() {
     <div
       aria-hidden
       className="fixed inset-0 w-full h-full pointer-events-none overflow-hidden"
-      style={{ zIndex: 30 }}
+      style={{ zIndex: 5 }}
     >
       <style>{`
         @keyframes sakuraFall {

@@ -48,7 +48,7 @@ export default function Fireflies() {
     <div
       aria-hidden
       className="fixed inset-0 w-full h-full pointer-events-none overflow-hidden mix-blend-screen"
-      style={{ zIndex: 30 }}
+      style={{ zIndex: 5 }}
     >
       {/* 动画引擎 */}
       <style>{`
