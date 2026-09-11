@@ -264,21 +264,26 @@ function isMp3Magic(b: Uint8Array): boolean {
 }
 
 /**
- * 解析「播放地址/封面地址」：兼容 302 重定向 / JSON / 纯文本 URL。
- * 注意：部分 Meting 实现对 type=url 会直接返回音频二进制流（audio/mpeg）
- * 而非 JSON 或重定向。此时把请求地址本身当作播放源返回。
+ * 解析「播放地址/封面地址」：兼容 302 重定向 / JSON / 纯文本 URL / 直接音频流。
+ *
+ * ⚠️ 关键坑（2026-09 定位到播放失败根因）：
+ * Node/undici 的 fetch 在 `redirect: "manual"` 下返回的是 *opaque-redirect*
+ * 响应（status=0、headers 为空、body=null），根本读不到 location，
+ * 于是像 injahow 这类「type=url 直接 302 到音频」的源会被判成解析失败（404）。
+ * 因此这里统一用 `redirect: "follow"`，然后：
+ *   1) 最终落到音频（content-type audio/*）→ 返回**接口地址本身**，
+ *      让浏览器自行跟随 302 拿最新签名地址（避免把带时效的直链写死）；
+ *   2) 其余情况按 JSON / 文本 / MP3 魔数继续解析。
  */
 async function resolveUrlLike(url: string): Promise<string> {
-  const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(REQUEST_TIMEOUT) });
+  const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(REQUEST_TIMEOUT) });
 
-  if (res.status >= 300 && res.status < 400) {
-    const loc = res.headers.get("location");
-    if (loc) return new URL(loc, url).toString();
-  }
-
-  // 直接返回音频流：Content-Type 以 audio/ 开头，或 body 命中 MP3 魔数（ID3 / 0xFFE0 frame sync）
+  // 直接返回音频流（或重定向后落到音频 CDN）：把接口地址交给浏览器跟随
   const ct = (res.headers.get("content-type") || "").toLowerCase();
-  if (ct.startsWith("audio/") || ct.startsWith("video/")) return url;
+  if (ct.startsWith("audio/") || ct.startsWith("video/")) {
+    await res.body?.cancel().catch(() => {});
+    return url;
+  }
 
   // 只有在「明确是文本 且 体积已知且很小」时才整包读取；
   // 其余一律只嗅探开头若干字节。
@@ -290,12 +295,19 @@ async function resolveUrlLike(url: string): Promise<string> {
   const isText = /(json|text|xml|urlencoded)/.test(ct);
   if (isText && contentLength > 0 && contentLength <= MAX_TEXT_BYTES) {
     const t = (await res.text()).trim();
-    return parseUrlLikeFromText(t, url, res.url);
+    const parsed = parseUrlLikeFromText(t, url, res.url);
+    if (parsed) return parsed;
+    // 文本里没解析出地址，但确实是「接口地址 → 最终地址」的跳转，用最终地址兜底
+    if (res.url && res.url !== url) return res.url;
+    return "";
   }
 
   const head = await peekHead(res, SNIFF_BYTES);
   if (isMp3Magic(head)) return url;
-  return parseUrlLikeFromText(new TextDecoder().decode(head).trim(), url, res.url);
+  const parsed = parseUrlLikeFromText(new TextDecoder().decode(head).trim(), url, res.url);
+  if (parsed) return parsed;
+  if (res.url && res.url !== url) return res.url;
+  return "";
 }
 
 /** 从文本片段中解析出 URL：JSON {url} / 纯文本 URL / 最终重定向地址 */
