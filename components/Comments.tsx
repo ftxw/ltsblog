@@ -696,7 +696,7 @@ function CommentCard({
             <p className="mt-1 text-[13px] md:text-sm text-justify text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words">
               {comment.content}
             </p>
-            <div className="mt-1.5 md:mt-2 flex items-center gap-4 md:gap-5 text-[12px] md:text-sm text-slate-500 dark:text-slate-400">
+            <div className="mt-1.5 md:mt-2 flex items-center justify-end gap-4 md:gap-5 text-[12px] md:text-sm text-slate-500 dark:text-slate-400">
               <button
                 type="button"
                 onClick={() => onCommentLike(comment.id)}
@@ -888,7 +888,7 @@ function ReplyCard({
               )}
               {reply.content}
             </p>
-            <div className="mt-1 flex items-center gap-4 md:gap-5 text-[12px] md:text-sm text-slate-500 dark:text-slate-400">
+            <div className="mt-1 flex items-center justify-end gap-4 md:gap-5 text-[12px] md:text-sm text-slate-500 dark:text-slate-400">
               <button
                 type="button"
                 onClick={() => onCommentLike(reply.id)}
