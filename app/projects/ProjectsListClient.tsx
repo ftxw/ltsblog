@@ -202,7 +202,7 @@ function ProjectDetailModal({
           className="relative w-full max-w-6xl h-full md:h-[88vh] md:max-h-[90vh] bg-white dark:bg-slate-900 md:rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row"
         >
           {/* 左侧：图片幻灯片 */}
-          <div className="relative w-full md:w-2/3 h-[40vh] md:h-full bg-slate-100 dark:bg-slate-800 flex-shrink-0">
+          <div className="group relative w-full md:w-2/3 h-[40vh] md:h-full bg-slate-100 dark:bg-slate-800 flex-shrink-0">
             {slides.length > 0 ? (
               <>
                 <AnimatePresence mode="wait">
@@ -232,14 +232,14 @@ function ProjectDetailModal({
                       onClick={() =>
                         setIdx((p) => (p - 1 + slides.length) % slides.length)
                       }
-                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur transition-colors"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur transition-opacity opacity-0 group-hover:opacity-100"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setIdx((p) => (p + 1) % slides.length)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur transition-opacity opacity-0 group-hover:opacity-100"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
@@ -249,13 +249,13 @@ function ProjectDetailModal({
                           key={i}
                           type="button"
                           onClick={() => setIdx(i)}
-                          className={`h-1.5 rounded-full transition-all ${
-                            i === idx ? "w-6 bg-white" : "w-1.5 bg-white/50"
+                          className={`h-2 rounded-full transition-colors ${
+                            i === idx ? "w-2 bg-white" : "w-2 bg-white/50"
                           }`}
                         />
                       ))}
                     </div>
-                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] bg-black/50 text-white backdrop-blur">
+                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] bg-black/50 text-white backdrop-blur transition-opacity opacity-0 group-hover:opacity-100">
                       {idx + 1} / {slides.length}
                     </div>
                   </>

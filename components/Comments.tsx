@@ -390,7 +390,7 @@ export default function Comments<T extends CommentItem>({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pt-1 pb-1.5 pl-[41px] md:pl-[45px]">
+            <div className="pt-1 pb-1.5 pl-1.5">
               {/* 第一行：回复 XXX（昵称与"回复"同色，输入框展开后无头像，文字靠左） */}
               <div className="text-[14px] font-medium text-slate-700 dark:text-slate-200">
                 回复 {replyTo.email_user_name || "匿名"}
@@ -412,25 +412,27 @@ export default function Comments<T extends CommentItem>({
               : "border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
           }`}
         >
-          {/* 头像：距输入框左边 5px */}
-          <button
-            type="button"
-            onClick={() => (loggedIn ? setComposing((v) => !v) : openLogin())}
-            className="shrink-0 rounded-full overflow-hidden"
-            aria-label="头像"
-          >
-            <div
-              className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold ${
-                loggedIn
-                  ? "bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 text-white text-xs md:text-sm"
-                  : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-300"
-              }`}
+          {/* 头像：距输入框左边 5px（输入框展开输入时隐藏） */}
+          {!(composing && loggedIn) && (
+            <button
+              type="button"
+              onClick={() => (loggedIn ? setComposing((v) => !v) : openLogin())}
+              className="shrink-0 rounded-full overflow-hidden"
+              aria-label="头像"
             >
-              {loggedIn
-                ? (user!.nickname || user!.email || "?").slice(0, 1).toUpperCase()
-                : <UserRound className="w-4 h-4" />}
-            </div>
-          </button>
+              <div
+                className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold ${
+                  loggedIn
+                    ? "bg-gradient-to-br from-indigo-400 to-sky-400 dark:from-indigo-600 dark:to-sky-600 text-white text-xs md:text-sm"
+                    : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-300"
+                }`}
+              >
+                {loggedIn
+                  ? (user!.nickname || user!.email || "?").slice(0, 1).toUpperCase()
+                  : <UserRound className="w-4 h-4" />}
+              </div>
+            </button>
+          )}
 
           {composing && loggedIn ? (
             <textarea

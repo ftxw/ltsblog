@@ -8,8 +8,8 @@ import { withTimeout } from "@/app/lib/timeout";
  *
  * 数据来源（后台「站点配置」→ 网易云 API 地址 / cloudMusicApiUrl 可配置）：
  *   1. 自定义 Meting-API 兼容服务（推荐自建：injahow/Meting-API、GZH-czy/meting-api 等）
- *   2. 默认公共 Meting-API：https://music.3e0.cn/（DreamMeting，兼容 meting 协议；
- *      曾用 api.injahow.cn/meting 但从服务器环境不稳定，2026-09 实测 3e0 可用）
+ *   2. 默认公共 Meting-API：https://api.injahow.cn/meting/（2026-09 实测可用）；
+ *      多源自动回退见 FALLBACK_METING_APIS（music.3e0.cn 已挂：Cloudflare 525）
  *   3. 兜底：@meting/core 直连网易云（仅当公共/自定义 API 不可用时）
  *
  * 协议格式：GET {api}?server=netease&type=playlist|song|url|pic|lyric&id=xxx
@@ -19,7 +19,17 @@ import { withTimeout } from "@/app/lib/timeout";
  *   - 歌词：JSON {lyric} 或纯文本 LRC
  */
 
-export const DEFAULT_METING_API = "https://music.3e0.cn/";
+export const DEFAULT_METING_API = "https://api.injahow.cn/meting/";
+
+/**
+ * 备用公共 Meting API：主源不可用时按顺序自动回退。
+ * 2026-09 实测：api.injahow.cn 可用（url 返回 302、歌单正常）；
+ * music.3e0.cn 已挂（Cloudflare 525 / 连接失败）。
+ */
+export const FALLBACK_METING_APIS = [
+  "https://api.injahow.cn/meting/",
+  "https://music.3e0.cn/",
+];
 
 /** 网易云官方接口请求头（参考项目 XHBlogs 同款） */
 const NET_EASE_HEADERS = {
@@ -387,19 +397,44 @@ async function attachHighResCovers(tracks: NormalizedTrack[]): Promise<void> {
 // ---------- 客户端 ----------
 class MetingApiClient implements MusicClient {
   private readonly apiUrl: string;
+  /** 主源 + 备用源（去重），任一可用即成功 */
+  private readonly bases: string[];
   private fallbackMeting: Meting | null = null;
 
   constructor(apiUrl: string) {
     this.apiUrl = apiUrl;
+    const norm = (u: string) => u.replace(//+$/, "");
+    this.bases = [
+      apiUrl,
+      ...FALLBACK_METING_APIS.filter((u) => norm(u) !== norm(apiUrl)),
+    ];
   }
 
-  private buildUrl(type: string, id: string, extra: Record<string, string> = {}): string {
-    const u = new URL(this.apiUrl);
+  private buildUrl(
+    type: string,
+    id: string,
+    extra: Record<string, string> = {},
+    base?: string
+  ): string {
+    const u = new URL(base ?? this.apiUrl);
     u.searchParams.set("server", "netease");
     u.searchParams.set("type", type);
     u.searchParams.set("id", String(id));
     for (const [k, v] of Object.entries(extra)) u.searchParams.set(k, v);
     return u.toString();
+  }
+
+  /** 依次尝试主源与备用源（首个成功即返回），全部失败才抛错 */
+  private async tryBases<T>(fn: (base: string) => Promise<T>): Promise<T> {
+    let lastErr: unknown;
+    for (const base of this.bases) {
+      try {
+        return await fn(base);
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error("all meting apis failed");
   }
 
   private cacheKey(type: string, id: string): string {
@@ -440,7 +475,7 @@ class MetingApiClient implements MusicClient {
     return MetingApiClient.run(
       (async () => {
         try {
-          const text = await fetchText(this.buildUrl("playlist", id));
+          const text = await this.tryBases((b) => fetchText(this.buildUrl("playlist", id, {}, b)));
           const tracks = toTrackList(JSON.parse(text))
             .map((t) => normalizeTrack(t))
             .filter((t): t is NormalizedTrack => t !== null);
@@ -467,7 +502,7 @@ class MetingApiClient implements MusicClient {
     return MetingApiClient.run(
       (async () => {
         try {
-          const text = await fetchText(this.buildUrl("song", id));
+          const text = await this.tryBases((b) => fetchText(this.buildUrl("song", id, {}, b)));
           const tracks = toTrackList(JSON.parse(text))
             .map((t) => normalizeTrack(t))
             .filter((t): t is NormalizedTrack => t !== null);
@@ -490,7 +525,9 @@ class MetingApiClient implements MusicClient {
     return MetingApiClient.run(
       (async () => {
         try {
-          const realUrl = await resolveUrlLike(this.buildUrl("url", id, { br: String(br) }));
+          const realUrl = await this.tryBases((b) =>
+            resolveUrlLike(this.buildUrl("url", id, { br: String(br) }, b))
+          );
           return JSON.stringify({ url: realUrl, size: 0, br });
         } catch {
           const raw = await this.fallback((m) => m.url(id, br));
@@ -508,7 +545,9 @@ class MetingApiClient implements MusicClient {
     return MetingApiClient.run(
       (async () => {
         try {
-          const realUrl = await resolveUrlLike(this.buildUrl("pic", id, { size: String(size) }));
+          const realUrl = await this.tryBases((b) =>
+            resolveUrlLike(this.buildUrl("pic", id, { size: String(size) }, b))
+          );
           const result = JSON.stringify({ url: realUrl });
           setCache(key, result, TTL.pic);
           return result;
@@ -529,7 +568,11 @@ class MetingApiClient implements MusicClient {
     return MetingApiClient.run(
       (async () => {
         try {
-          const lrc = await resolveLyricText(this.buildUrl("lrc", id));
+          const lrc = await this.tryBases(async (b) => {
+            const t = await resolveLyricText(this.buildUrl("lrc", id, {}, b));
+            if (!t.trim()) throw new Error("empty lyric");
+            return t;
+          });
           if (lrc.trim()) {
             const result = JSON.stringify({ lyric: lrc, tlyric: "" });
             setCache(key, result, TTL.lyric);
