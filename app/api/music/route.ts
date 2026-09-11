@@ -19,7 +19,7 @@ export const runtime = "nodejs";
  * 因此这里再兜一层总闸：无论内部怎么重试/兜底，超过 MUSIC_DEADLINE 一律
  * 返回空列表，宁可这次没歌，也不能拖垮整站。
  */
-const MUSIC_DEADLINE = 8_000;
+const MUSIC_DEADLINE = 10_000;
 
 interface SongData {
   id: string;
@@ -103,13 +103,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json([]);
     }
 
-    return cachedPublicGet(CACHE_NAMESPACE.music, new Request(removeCacheBuster(req.url)), () =>
-      withTimeout(
-        getNeteaseSongs(playlistId, songIds),
-        MUSIC_DEADLINE,
-        "music playlist"
-      ).catch(() => [] as SongData[])
-    );
+    // 注意：上游失败必须抛出（而不是 return []），否则失败结果会被
+    // cachedPublicGet 当成功缓存 60s —— 一次抖动会让所有访客 60s 内都拿不到歌单。
+    try {
+      return await cachedPublicGet(
+        CACHE_NAMESPACE.music,
+        new Request(removeCacheBuster(req.url)),
+        () =>
+          withTimeout(
+            getNeteaseSongs(playlistId, songIds),
+            MUSIC_DEADLINE,
+            "music playlist"
+          )
+      );
+    } catch (upstreamErr) {
+      console.error("Music playlist upstream error:", upstreamErr);
+      return NextResponse.json([], {
+        headers: { "X-Cache": "BYPASS", "Cache-Control": "no-store" },
+      });
+    }
   } catch (err) {
     console.error("Music API error:", err);
     return NextResponse.json(

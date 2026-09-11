@@ -28,6 +28,7 @@ export const DEFAULT_METING_API = "https://api.injahow.cn/meting/";
  */
 export const FALLBACK_METING_APIS = [
   "https://api.injahow.cn/meting/",
+  "https://api.qijieya.cn/meting/",
   "https://music.3e0.cn/",
 ];
 
@@ -209,7 +210,7 @@ function toTrackList(data: unknown): unknown[] {
 // ---------- HTTP 请求 ----------
 // 超时策略（serverless 关键）：任何对外请求都必须有硬上限。
 // 一个请求挂 30s 就会长时间独占函数实例，并发一上来整站「点击/刷新无响应」。
-const REQUEST_TIMEOUT = 8_000;
+const REQUEST_TIMEOUT = 5_000;
 /**
  * @meting/core 兜底路径的硬超时。
  * 该库内部是「单次 20s 超时 × 最多 3 次重试 + 每次间隔 1s」，最坏可挂 60s+，
@@ -436,14 +437,21 @@ class MetingApiClient implements MusicClient {
     return u.toString();
   }
 
-  /** 依次尝试主源与备用源（首个成功即返回），全部失败才抛错 */
+  /**
+   * 依次尝试主源与备用源（首个成功即返回）。
+   * 每个源重试 2 次：公共 Meting 服务是第三方免费源，偶发超时/5xx 很常见，
+   * 单次失败就换源会误判「全部不可用」。
+   */
   private async tryBases<T>(fn: (base: string) => Promise<T>): Promise<T> {
     let lastErr: unknown;
     for (const base of this.bases) {
-      try {
-        return await fn(base);
-      } catch (e) {
-        lastErr = e;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          return await fn(base);
+        } catch (e) {
+          lastErr = e;
+          if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
+        }
       }
     }
     throw lastErr instanceof Error ? lastErr : new Error("all meting apis failed");

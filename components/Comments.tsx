@@ -390,7 +390,7 @@ export default function Comments<T extends CommentItem>({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pt-1 pb-1.5 pl-1.5">
+            <div className="pt-1 pb-1.5 pl-3">
               {/* 第一行：回复 XXX（昵称与"回复"同色，输入框展开后无头像，文字靠左） */}
               <div className="text-[14px] font-medium text-slate-700 dark:text-slate-200">
                 回复 {replyTo.email_user_name || "匿名"}
@@ -406,10 +406,10 @@ export default function Comments<T extends CommentItem>({
       {/* ===== 评论条：第一行 = 输入框（头像在输入框内部），展开时原地变全宽 ===== */}
       <div className="flex items-center">
         <div
-          className={`flex-1 min-w-0 flex items-center gap-2 rounded-[21px] bg-slate-100/80 dark:bg-slate-800/70 border min-h-[42px] pl-[5px] pr-3 py-0 transition-colors ${
+          className={`flex-1 min-w-0 flex items-center gap-2 rounded-[21px] bg-slate-100/80 dark:bg-slate-800/70 border min-h-[42px] transition-colors ${
             composing && loggedIn
-              ? "border-indigo-300 dark:border-indigo-500/50"
-              : "border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
+              ? "p-[11px] border-indigo-300 dark:border-indigo-500/50"
+              : "pl-[5px] pr-3 py-[6px] border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
           }`}
         >
           {/* 头像：距输入框左边 5px（输入框展开输入时隐藏） */}
@@ -446,7 +446,7 @@ export default function Comments<T extends CommentItem>({
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
                   handleSubmitComment();
               }}
-              className="flex-1 min-w-0 max-h-40 bg-transparent text-[13px] md:text-sm leading-relaxed text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none overflow-y-auto"
+              className="flex-1 min-w-0 min-h-5 max-h-40 bg-transparent text-[13px] md:text-sm leading-[20px] text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none overflow-y-auto"
             />
           ) : (
             <button
