@@ -403,7 +403,7 @@ class MetingApiClient implements MusicClient {
 
   constructor(apiUrl: string) {
     this.apiUrl = apiUrl;
-    const norm = (u: string) => u.replace(//+$/, "");
+    const norm = (u: string) => u.replace(/\/+$/, "");
     this.bases = [
       apiUrl,
       ...FALLBACK_METING_APIS.filter((u) => norm(u) !== norm(apiUrl)),
