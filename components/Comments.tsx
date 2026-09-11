@@ -390,7 +390,7 @@ export default function Comments<T extends CommentItem>({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pt-1 pb-1.5 pl-3">
+            <div className="pt-1 pb-1.5 pl-2.5 md:pl-3">
               {/* 第一行：回复 XXX（昵称与"回复"同色，输入框展开后无头像，文字靠左） */}
               <div className="text-[14px] font-medium text-slate-700 dark:text-slate-200">
                 回复 {replyTo.email_user_name || "匿名"}
@@ -408,7 +408,7 @@ export default function Comments<T extends CommentItem>({
         <div
           className={`flex-1 min-w-0 flex items-center gap-2 rounded-[21px] bg-slate-100/80 dark:bg-slate-800/70 border min-h-[42px] transition-colors ${
             composing && loggedIn
-              ? "p-[11px] border-indigo-300 dark:border-indigo-500/50"
+              ? "py-[11px] px-2.5 md:px-3 border-indigo-300 dark:border-indigo-500/50"
               : "pl-[5px] pr-3 py-[6px] border-white/40 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50"
           }`}
         >
@@ -446,7 +446,7 @@ export default function Comments<T extends CommentItem>({
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
                   handleSubmitComment();
               }}
-              className="flex-1 min-w-0 min-h-5 max-h-40 bg-transparent text-[13px] md:text-sm leading-[20px] text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none overflow-y-auto"
+              className="flex-1 min-w-0 min-h-5 max-h-40 bg-transparent text-[13px] md:text-sm leading-[20px] text-justify text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none overflow-y-auto"
             />
           ) : (
             <button
@@ -693,7 +693,7 @@ function CommentCard({
                 {relativeTime(comment.created_at)}
               </span>
             </div>
-            <p className="mt-1 text-[13px] md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words">
+            <p className="mt-1 text-[13px] md:text-sm text-justify text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words">
               {comment.content}
             </p>
             <div className="mt-1.5 md:mt-2 flex items-center gap-4 md:gap-5 text-[12px] md:text-sm text-slate-500 dark:text-slate-400">
@@ -880,7 +880,7 @@ function ReplyCard({
                 {relativeTime(reply.created_at)}
               </span>
             </div>
-            <p className="mt-0.5 text-[13px] md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words">
+            <p className="mt-0.5 text-[13px] md:text-sm text-justify text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words">
               {reply.replyToUser && (
                 <span className="text-sky-500 dark:text-sky-400 mr-1">
                   回复 @{reply.replyToUser}：
