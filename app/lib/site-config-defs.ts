@@ -131,14 +131,6 @@ export const siteConfigDefs: SiteConfigDef[] = [
   { key: "themeColors", label: "主题颜色", type: "json", description: "主题颜色数组（JSON），如 [\"#a18cd1\",\"#fbc2eb\"]", defaultValue: JSON.stringify(["#a18cd1", "#fbc2eb", "#a1c4fd", "#c2e9fb"]), group: "site" },
   { key: "bgImages", label: "背景图片", type: "multiImage", description: "背景图片地址数组（JSON）", defaultValue: JSON.stringify(["/images/2.webp"]), group: "site" },
   { key: "defaultPostCover", label: "文章默认封面", type: "singleImage", description: "文章未设置封面时使用", defaultValue: "/images/default.avif", group: "site" },
-  { key: "seasonEffect", label: "四季特效", type: "select", description: "前台悬浮粒子特效：自动按月份切换季节，也可指定季节或关闭", defaultValue: "auto", group: "site", options: [
-    { label: "自动（按月份）", value: "auto" },
-    { label: "关闭", value: "off" },
-    { label: "春 · 花瓣", value: "spring" },
-    { label: "夏 · 萤火", value: "summer" },
-    { label: "秋 · 落叶", value: "autumn" },
-    { label: "冬 · 飘雪", value: "winter" },
-  ] },
   { key: "themeMode", label: "默认主题", type: "select", description: "访客首次访问（未手动切换过主题）时使用的主题，默认夜晚", defaultValue: "dark", group: "site", options: [
     { label: "夜晚（暗色）", value: "dark" },
     { label: "白天（亮色）", value: "light" },
